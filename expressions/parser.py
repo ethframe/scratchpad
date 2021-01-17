@@ -58,6 +58,13 @@ POSTFIX = {
 }
 
 
+def parse_prim(lexer: Lexer, tok: Token) -> Node:
+    if tok.kind in {"ident", "num"}:
+        lexer.advance()
+        return Term(tok.kind, tok.value)
+    raise ValueError("Unexpected token")
+
+
 def parse_bp(lexer: Lexer, bp: int) -> Node:
     tok = lexer.peek()
     if tok.kind == "op":
@@ -66,7 +73,7 @@ def parse_bp(lexer: Lexer, bp: int) -> Node:
             lexer.advance()
             expr = parse_bp(lexer, rbp)
             if lexer.peek() != Token("op", end):
-                raise ValueError()
+                raise ValueError("Unexpected token")
             lexer.advance()
         elif tok.value in PREFIX:
             rbp = PREFIX[tok.value]
@@ -77,8 +84,7 @@ def parse_bp(lexer: Lexer, bp: int) -> Node:
     elif tok == EOF:
         raise ValueError("Unexpected end of file")
     else:
-        lexer.advance()
-        expr = Term(tok.kind, tok.value)
+        expr = parse_prim(lexer, tok)
     while True:
         tok = lexer.peek()
         if tok.kind == "op":
