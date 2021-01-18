@@ -1,14 +1,14 @@
 import pytest
 
-from expressions.parser import Binary, Node, Term, Unary, parse
+from expressions.pratt import Binary, Node, Term, Unary, parse
 
 DATA_POSITIVE = [
     (
         "a + b + c",
         Binary(
-            op="+",
+            op="add",
             lhs=Binary(
-                op="+",
+                op="add",
                 lhs=Term("ident", "a"),
                 rhs=Term("ident", "b")
             ),
@@ -18,10 +18,10 @@ DATA_POSITIVE = [
     (
         "a + (b + c)",
         Binary(
-            op="+",
+            op="add",
             lhs=Term("ident", "a"),
             rhs=Binary(
-                op="+",
+                op="add",
                 lhs=Term("ident", "b"),
                 rhs=Term("ident", "c")
             )
@@ -30,9 +30,9 @@ DATA_POSITIVE = [
     (
         "a * b + c",
         Binary(
-            op="+",
+            op="add",
             lhs=Binary(
-                op="*",
+                op="mul",
                 lhs=Term("ident", "a"),
                 rhs=Term("ident", "b")
             ),
@@ -42,10 +42,10 @@ DATA_POSITIVE = [
     (
         "a + b * c",
         Binary(
-            op="+",
+            op="add",
             lhs=Term("ident", "a"),
             rhs=Binary(
-                op="*",
+                op="mul",
                 lhs=Term("ident", "b"),
                 rhs=Term("ident", "c")
             )
@@ -54,26 +54,26 @@ DATA_POSITIVE = [
     (
         "-a + b",
         Binary(
-            op="+",
-            lhs=Unary(op="-", arg=Term("ident", "a")),
+            op="add",
+            lhs=Unary(op="neg", arg=Term("ident", "a")),
             rhs=Term("ident", "b")
         )
     ),
     (
         "-a ^ b",
         Binary(
-            op="^",
-            lhs=Unary(op="-", arg=Term("ident", "a")),
+            op="pow",
+            lhs=Unary(op="neg", arg=Term("ident", "a")),
             rhs=Term("ident", "b")
         )
     ),
     (
         "a ^ b ^ c",
         Binary(
-            op="^",
+            op="pow",
             lhs=Term("ident", "a"),
             rhs=Binary(
-                op="^",
+                op="pow",
                 lhs=Term("ident", "b"),
                 rhs=Term("ident", "c")
             )
@@ -81,19 +81,19 @@ DATA_POSITIVE = [
     ),
     (
         "-a!",
-        Unary(op="-", arg=Unary(op="!", arg=Term("ident", "a")))
+        Unary(op="neg", arg=Unary(op="fact", arg=Term("ident", "a")))
     ),
     (
         "(-a)!",
-        Unary(op="!", arg=Unary(op="-", arg=Term("ident", "a")))
+        Unary(op="fact", arg=Unary(op="neg", arg=Term("ident", "a")))
     ),
     (
         "--+a",
         Unary(
-            op="-",
+            op="neg",
             arg=Unary(
-                op="-",
-                arg=Unary(op="+", arg=Term("ident", "a"))
+                op="neg",
+                arg=Unary(op="pos", arg=Term("ident", "a"))
             )
         )
     ),
