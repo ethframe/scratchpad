@@ -65,24 +65,20 @@ def parse_prim(lexer: Lexer, tok: Token) -> Node:
     raise ValueError("Unexpected token")
 
 
-def parse_bp(lexer: Lexer, bp: int) -> Node:
+def parse_expr(lexer: Lexer, bp: int) -> Node:
     tok = lexer.peek()
     if tok.kind == "op":
         if tok.value in CLOSED:
             rbp, end = CLOSED[tok.value]
             lexer.advance()
-            expr = parse_bp(lexer, rbp)
-            if lexer.peek() != Token("op", end):
-                raise ValueError("Unexpected token")
+            expr = parse_until(lexer, rbp, Token("op", end))
             lexer.advance()
         elif tok.value in PREFIX:
             rbp = PREFIX[tok.value]
             lexer.advance()
-            expr = Unary(tok.value, parse_bp(lexer, rbp))
+            expr = Unary(tok.value, parse_expr(lexer, rbp))
         else:
-            raise ValueError("Unknown prefix operator")
-    elif tok == EOF:
-        raise ValueError("Unexpected end of file")
+            expr = parse_prim(lexer, tok)
     else:
         expr = parse_prim(lexer, tok)
     while True:
@@ -93,7 +89,7 @@ def parse_bp(lexer: Lexer, bp: int) -> Node:
                 if lbp < bp:
                     break
                 lexer.advance()
-                expr = Binary(tok.value, expr, parse_bp(lexer, rbp))
+                expr = Binary(tok.value, expr, parse_expr(lexer, rbp))
             elif tok.value in POSTFIX:
                 lbp = POSTFIX[tok.value]
                 if lbp < bp:
@@ -102,16 +98,18 @@ def parse_bp(lexer: Lexer, bp: int) -> Node:
                 expr = Unary(tok.value, expr)
             else:
                 break
-        elif tok == EOF:
-            break
         else:
-            raise ValueError("Unexpected token")
+            break
+    return expr
+
+
+def parse_until(lexer: Lexer, bp: int, tok: Token) -> Node:
+    expr = parse_expr(lexer, bp)
+    if lexer.peek() != tok:
+        raise ValueError("Unexpected token")
     return expr
 
 
 def parse(src: str) -> Node:
     lexer = Lexer(split_tokens(src, TOKENS, EOF))
-    expr = parse_bp(lexer, 0)
-    if lexer.peek() != EOF:
-        raise ValueError("Unexpected token")
-    return expr
+    return parse_until(lexer, 0, EOF)
