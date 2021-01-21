@@ -1,20 +1,21 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
-Stack = List['Term']
-Env = List['Term']
+from .matching import ConstantBuilder, Matchable, MatchOpBuilder, VarOpBuilder
+
+Stack = List[Matchable['TermOp']]
+Env = List[Matchable['TermOp']]
 
 
-class Term:
-    def handle_match_op(self, op: 'MatchOp', stack: Stack, env: Env) -> bool:
-        raise NotImplementedError()
+class Term(Matchable['TermOp']):
+    pass
 
 
 @dataclass
 class Val(Term):
     value: str
 
-    def handle_match_op(self, op: 'MatchOp', stack: Stack, env: Env) -> bool:
+    def handle_match_op(self, op: 'TermOp', stack: Stack, env: Env) -> bool:
         return op.handle_val(self, stack, env)
 
 
@@ -23,11 +24,11 @@ class Func(Term):
     name: str
     args: List[Term]
 
-    def handle_match_op(self, op: 'MatchOp', stack: Stack, env: Env) -> bool:
+    def handle_match_op(self, op: 'TermOp', stack: Stack, env: Env) -> bool:
         return op.handle_func(self, stack, env)
 
 
-class MatchOp:
+class TermOp:
     def handle_term(self, term: Term, stack: Stack, env: Env) -> bool:
         return False
 
@@ -38,20 +39,7 @@ class MatchOp:
         return self.handle_term(term, stack, env)
 
 
-class MatchOpBuilder:
-    def build(self, bound: List[str]) -> MatchOp:
-        raise NotImplementedError()
-
-
-class ConstantBuilder(MatchOpBuilder):
-    def __init__(self, op: MatchOp):
-        self.op = op
-
-    def build(self, bound: List[str]) -> MatchOp:
-        return self.op
-
-
-class Unwrap(MatchOp):
+class Unwrap(TermOp):
     def __init__(self, name: str, arity: int):
         self.name = name
         self.arity = arity
@@ -63,7 +51,7 @@ class Unwrap(MatchOp):
         return True
 
 
-class MatchVal(MatchOp):
+class MatchVal(TermOp):
     def __init__(self, value: str):
         self.value = value
 
@@ -71,27 +59,13 @@ class MatchVal(MatchOp):
         return self.value == term.value
 
 
-class VarOpBuilder(MatchOpBuilder):
-    def __init__(self, name: str):
-        self.name = name
-
-    def build(self, bound: List[str]) -> MatchOp:
-        try:
-            idx = bound.index(self.name)
-        except ValueError:
-            bound.append(self.name)
-            return BindVar()
-        else:
-            return MatchVar(idx)
-
-
-class BindVar(MatchOp):
+class BindVar(TermOp):
     def handle_term(self, term: Term, stack: Stack, env: Env) -> bool:
         env.append(term)
         return True
 
 
-class MatchVar(MatchOp):
+class MatchVar(TermOp):
     def __init__(self, idx: int):
         self.idx = idx
 
@@ -99,39 +73,19 @@ class MatchVar(MatchOp):
         return env[self.idx] == term
 
 
-class Pattern:
-    def __init__(self, ops: List[MatchOp], bound: List[str]):
-        self.ops = ops
-        self.bound = bound
-
-    def match(self, term: Term) -> Optional[List[Term]]:
-        stack: List[Term] = [term]
-        env: List[Term] = []
-        for op in self.ops:
-            term = stack.pop()
-            if not term.handle_match_op(op, stack, env):
-                return None
-        return env
+TermOpBuilder = MatchOpBuilder[TermOp]
 
 
-def build_pattern(builders: List[MatchOpBuilder]) -> Pattern:
-    bound: List[str] = []
-    result: List[MatchOp] = []
-    for builder in builders:
-        result.append(builder.build(bound))
-    return Pattern(result, bound)
-
-
-def func(name: str, *args: List[MatchOpBuilder]) -> List[MatchOpBuilder]:
-    result: List[MatchOpBuilder] = [ConstantBuilder(Unwrap(name, len(args)))]
+def func(name: str, *args: List[TermOpBuilder]) -> List[TermOpBuilder]:
+    result: List[TermOpBuilder] = [ConstantBuilder(Unwrap(name, len(args)))]
     for arg in args:
         result.extend(arg)
     return result
 
 
-def val(value: str) -> List[MatchOpBuilder]:
+def val(value: str) -> List[TermOpBuilder]:
     return [ConstantBuilder(MatchVal(value))]
 
 
-def v(name: str) -> List[MatchOpBuilder]:
-    return [VarOpBuilder(name)]
+def v(name: str) -> List[TermOpBuilder]:
+    return [VarOpBuilder(name, BindVar, MatchVar)]
