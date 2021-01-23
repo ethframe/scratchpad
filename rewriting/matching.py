@@ -74,9 +74,20 @@ class Pattern(Generic[M]):
         return ctx.vars
 
 
-def build_pattern(builders: List[MatchOpBuilder[M]]) -> Pattern[M]:
-    bound: List[str] = []
-    result: List[M] = []
-    for builder in builders:
-        result.append(builder.build(bound))
-    return Pattern(result, bound)
+class PatternBuilder(Generic[M]):
+    def __init__(self, ops: List[MatchOpBuilder[M]]):
+        self.ops = ops
+
+    @classmethod
+    def from_op(cls, op: MatchOpBuilder[M]) -> 'PatternBuilder[M]':
+        return PatternBuilder([op])
+
+    def concat(self, other: 'PatternBuilder[M]') -> 'PatternBuilder[M]':
+        return PatternBuilder(self.ops + other.ops)
+
+    def build(self) -> Pattern[M]:
+        bound: List[str] = []
+        ops: List[M] = []
+        for op in self.ops:
+            ops.append(op.build(bound))
+        return Pattern(ops, bound)

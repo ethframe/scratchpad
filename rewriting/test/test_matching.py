@@ -2,8 +2,8 @@ from typing import List, Optional
 
 import pytest
 
-from rewriting.matching import build_pattern
-from rewriting.terms import Func, Term, TermOpBuilder, Val, func, v, val
+from rewriting.matching import PatternBuilder
+from rewriting.terms import Func, Term, TermOp, Val, func, v, val
 
 TEST_DATA = [
     (Func("func", [Val("a"), Val("b")]), func("func", val("a"), val("b")), []),
@@ -25,8 +25,8 @@ TEST_DATA = [
 ]
 
 
-@pytest.mark.parametrize("term, ops, result", TEST_DATA)
+@pytest.mark.parametrize("term, pattern, result", TEST_DATA)
 def test_match(
-        term: Term, ops: List[TermOpBuilder],
+        term: Term, pattern: PatternBuilder[TermOp],
         result: Optional[List[Term]]) -> None:
-    assert build_pattern(ops).match(term) == result
+    assert pattern.build().match(term) == result

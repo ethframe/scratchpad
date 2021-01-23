@@ -2,11 +2,8 @@ from dataclasses import dataclass
 from typing import List
 
 from .matching import (
-    ConstantOpBuilder, Context, Matchable, MatchOpBuilder, VarOpBuilder
+    ConstantOpBuilder, Context, Matchable, PatternBuilder, VarOpBuilder
 )
-
-Stack = List[Matchable['TermOp']]
-Env = List[Matchable['TermOp']]
 
 
 class Term(Matchable['TermOp']):
@@ -80,24 +77,21 @@ class MatchAny(TermOp):
         return True
 
 
-TermOpBuilder = MatchOpBuilder[TermOp]
-
-
-def func(name: str, *args: List[TermOpBuilder]) -> List[TermOpBuilder]:
-    result: List[TermOpBuilder] = [
+def func(name: str, *args: PatternBuilder[TermOp]) -> PatternBuilder[TermOp]:
+    builder = PatternBuilder[TermOp].from_op(
         ConstantOpBuilder(MatchFunc(name, len(args)))
-    ]
+    )
     for arg in args:
-        result.extend(arg)
-    return result
+        builder = builder.concat(arg)
+    return builder
 
 
-def val(value: str) -> List[TermOpBuilder]:
-    return [ConstantOpBuilder(MatchVal(value))]
+def val(value: str) -> PatternBuilder[TermOp]:
+    return PatternBuilder.from_op(ConstantOpBuilder(MatchVal(value)))
 
 
-def v(name: str) -> List[TermOpBuilder]:
-    return [VarOpBuilder(name, BindVar, MatchVar)]
+def v(name: str) -> PatternBuilder[TermOp]:
+    return PatternBuilder.from_op(VarOpBuilder(name, BindVar, MatchVar))
 
 
-_ = [ConstantOpBuilder(MatchAny())]
+_ = PatternBuilder.from_op(ConstantOpBuilder(MatchAny()))
