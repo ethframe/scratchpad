@@ -1,6 +1,5 @@
-from typing import Callable, Generic, Iterable, List, Optional, TypeVar
+from typing import Callable, Dict, Generic, Iterable, List, Optional, TypeVar
 
-T = TypeVar('T')
 M = TypeVar('M')
 
 
@@ -66,12 +65,12 @@ class Pattern(Generic[M]):
         self.ops = ops
         self.bound = bound
 
-    def match(self, term: Matchable[M]) -> Optional[List[Matchable[M]]]:
+    def match(self, term: Matchable[M]) -> Optional[Dict[str, Matchable[M]]]:
         ctx = Context(term)
         for op in self.ops:
             if not ctx.apply(op):
                 return None
-        return ctx.vars
+        return dict(zip(self.bound, ctx.vars))
 
 
 class PatternBuilder(Generic[M]):
