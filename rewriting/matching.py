@@ -1,15 +1,33 @@
-from typing import Callable, Generic, List, Optional, TypeVar
-
+from typing import Callable, Generic, Iterable, List, Optional, TypeVar
 
 T = TypeVar('T')
 M = TypeVar('M')
 
 
 class Matchable(Generic[M]):
-    def handle_match_op(
-            self, op: M, stack: List['Matchable[M]'],
-            env: List['Matchable[M]']) -> bool:
+    def handle_match_op(self, op: M, ctx: 'Context[M]') -> bool:
         raise NotImplementedError()
+
+
+class Context(Generic[M]):
+    def __init__(self, term: Matchable[M]):
+        self.stack: List[Matchable[M]] = [term]
+        self.vars: List[Matchable[M]] = []
+
+    def apply(self, op: M) -> bool:
+        return self.stack.pop().handle_match_op(op, self)
+
+    def push_term(self, term: Matchable[M]) -> None:
+        self.stack.append(term)
+
+    def push_terms(self, terms: Iterable[Matchable[M]]) -> None:
+        self.stack.extend(terms)
+
+    def push_var(self, term: Matchable[M]) -> None:
+        self.vars.append(term)
+
+    def get_var(self, idx: int) -> Matchable[M]:
+        return self.vars[idx]
 
 
 class MatchOpBuilder(Generic[M]):
@@ -17,7 +35,7 @@ class MatchOpBuilder(Generic[M]):
         raise NotImplementedError()
 
 
-class ConstantBuilder(MatchOpBuilder[M]):
+class ConstantOpBuilder(MatchOpBuilder[M]):
     def __init__(self, op: M):
         self.op = op
 
@@ -49,13 +67,11 @@ class Pattern(Generic[M]):
         self.bound = bound
 
     def match(self, term: Matchable[M]) -> Optional[List[Matchable[M]]]:
-        stack: List[Matchable[M]] = [term]
-        env: List[Matchable[M]] = []
+        ctx = Context(term)
         for op in self.ops:
-            term = stack.pop()
-            if not term.handle_match_op(op, stack, env):
+            if not ctx.apply(op):
                 return None
-        return env
+        return ctx.vars
 
 
 def build_pattern(builders: List[MatchOpBuilder[M]]) -> Pattern[M]:
