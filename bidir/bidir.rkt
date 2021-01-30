@@ -10,34 +10,34 @@
 ;; //arXiv preprint arXiv:1908.05839. – 2019.
 
 (define-language λ
-  (e ::=
-     x
+  (e x
      (λ x e)
      (e e)
      ()
-     (: e T))
-  (T A B C ::=
-     unit
-     (→ T T))
-  (x ::= variable-not-otherwise-mentioned))
+     (e : T))
+  ((T A B C) unit
+             (T → T))
+  (x variable-not-otherwise-mentioned))
 
 
 ;; Typing context
 
 (define-extended-language λ+Γ λ
-  (Γ ::=
-     ·
-     ((: x T) Γ)))
+  (Γ ((x T) ...)))
 
 
 ;; Helpers
 
 (define-metafunction λ+Γ
   lookup : Γ x -> T
-  [(lookup ((: x T) _) x) T]
-  [(lookup (_ Γ) x) (lookup Γ x)]
-  [(lookup · x) ,(error 'lookup "not found: ~e" (term x))])
+  [(lookup ((x_o _) ... (x T) _ ...) x)
+   T
+   (side-condition (not (member (term x) (term (x_o ...)))))]
+  [(lookup _ x) ,(error 'lookup "not found: ~e" (term x))])
 
+(define-metafunction λ+Γ
+  extend : Γ (x T) ... -> Γ
+  [(extend ((x_Γ T_Γ) ...) (x T) ...) ((x T) ... (x_Γ T_Γ) ...)])
 
 (define-metafunction λ+Γ
   equal-types? : T T -> boolean
@@ -49,52 +49,52 @@
 
 (define-judgment-form
   λ+Γ
-  #:mode (type-⇐ I I I)
-  #:contract (type-⇐ Γ e T)
-  [(type-⇒ Γ e A)
+  #:mode (check I I I)
+  #:contract (check Γ e T)
+  [(synth Γ e A)
    (side-condition (equal-types? A B))
    ----------------------------------- sub-⇐
-   (type-⇐ Γ e B)]
+   (check Γ e B)]
 
   [------------------ unit-i-⇐
-   (type-⇐ Γ () unit)]
+   (check Γ () unit)]
 
-  [(type-⇐ ((: x A_1) Γ) e A_2)
-   ------------------------------ →-i-⇐
-   (type-⇐ Γ (λ x e) (→ A_1 A_2))])
+  [(check (extend Γ (x A_1)) e A_2)
+   -------------------------------- →-i-⇐
+   (check Γ (λ x e) (A_1 → A_2))])
 
 
 (define-judgment-form
   λ+Γ
-  #:mode (type-⇒ I I O)
-  #:contract (type-⇒ Γ e T)
-  [------------------------- var-⇒
-   (type-⇒ Γ x (lookup Γ x))]
+  #:mode (synth I I O)
+  #:contract (synth Γ e T)
+  [------------------------ var-⇒
+   (synth Γ x (lookup Γ x))]
 
-  [(type-⇐ Γ e A)
-   -------------------- anno-⇒
-   (type-⇒ Γ (: e A) A)]
+  [(check Γ e A)
+   ------------------- anno-⇒
+   (synth Γ (e : A) A)]
   
-  [(type-⇒ Γ e_1 (→ A B))
-   (type-⇐ Γ e_2 A)
-   ---------------------- →-e-⇒
-   (type-⇒ Γ (e_1 e_2) B)])
+  [(synth Γ e_1 (A → B))
+   (check Γ e_2 A)
+   --------------------- →-e-⇒
+   (synth Γ (e_1 e_2) B)])
 
 
 ;; Test typing
 
 (test-judgment-holds
- (type-⇐ · () unit))
+ (check () () unit))
 
 (test-judgment-holds
- (type-⇒
-  ((: x (→ unit unit)) ·)
+ (synth
+  ((x (unit → unit)))
   x
-  (→ unit unit)))
+  (unit → unit)))
 
 (test-judgment-holds
- (type-⇒
-  ((: x (→ unit unit)) ·)
+ (synth
+  ((x (unit → unit)))
   (x ())
   unit))
 
@@ -103,16 +103,19 @@
 
 ;; Render everything to file
 
+(define rendered
+  (vl-append
+   10
+   (language->pict λ)
+   (language->pict λ+Γ)
+   (metafunction->pict lookup #:contract? #t)
+   (metafunction->pict extend #:contract? #t)
+   (metafunction->pict equal-types? #:contract? #t)
+   (judgment-form->pict check)
+   (judgment-form->pict synth)))
+
 (with-output-to-file
     "bidir.pdf"
   (lambda ()
     (write-bytes
-     (convert (vl-append
-               10
-               (language->pict λ)
-               (language->pict λ+Γ)
-               (metafunction->pict lookup #:contract? #t)
-               (metafunction->pict equal-types? #:contract? #t)
-               (judgment-form->pict type-⇐)
-               (judgment-form->pict type-⇒))
-              'pdf-bytes))))
+     (convert rendered 'pdf-bytes))))
