@@ -102,28 +102,20 @@ def parse_prim(lexer: Lexer, tok: Token) -> Node:
 
 def parse_expr(lexer: Lexer, bp: int) -> Node:
     tok = lexer.peek()
-    if tok.kind == "op":
-        if tok.value in NUD:
-            parse_nud = NUD[tok.value]
-            lexer.advance()
-            expr = parse_nud(lexer)
-        else:
-            expr = parse_prim(lexer, tok)
+    if tok.kind == "op" and tok.value in NUD:
+        parse_nud = NUD[tok.value]
+        lexer.advance()
+        expr = parse_nud(lexer)
     else:
         expr = parse_prim(lexer, tok)
-    while True:
-        tok = lexer.peek()
-        if tok.kind == "op":
-            if tok.value in LED:
-                lbp, parse_led = LED[tok.value]
-                if lbp < bp:
-                    break
-                lexer.advance()
-                expr = parse_led(lexer, expr)
-            else:
-                break
-        else:
+    tok = lexer.peek()
+    while tok.kind == "op" and tok.value in LED:
+        lbp, parse_led = LED[tok.value]
+        if lbp < bp:
             break
+        lexer.advance()
+        expr = parse_led(lexer, expr)
+        tok = lexer.peek()
     return expr
 
 
