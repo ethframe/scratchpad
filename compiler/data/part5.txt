@@ -1,0 +1,88 @@
+1
+---
+.global _expr
+
+.section .text
+_expr:
+	pushq   %rbp
+	movq    %rsp, %rbp
+	pushq   $1
+	movq    %rbp, %rax
+	subq    %rsp, %rax
+	cmpq    $8, %rax
+	jl      _error
+	popq    %rax
+	movq    %rbp, %rsp
+	popq    %rbp
+	ret
+_error:
+	call    abort
+
+===
+1 2 +
+---
+.global _expr
+
+.section .text
+_expr:
+	pushq   %rbp
+	movq    %rsp, %rbp
+	pushq   $1
+	pushq   $2
+	movq    %rbp, %rax
+	subq    %rsp, %rax
+	cmpq    $16, %rax
+	jl      _error
+	popq    %rcx
+	popq    %rax
+	addq    %rcx, %rax
+	pushq   %rax
+	movq    %rbp, %rax
+	subq    %rsp, %rax
+	cmpq    $8, %rax
+	jl      _error
+	popq    %rax
+	movq    %rbp, %rsp
+	popq    %rbp
+	ret
+_error:
+	call    abort
+
+===
+1 2 + 3 *
+---
+.global _expr
+
+.section .text
+_expr:
+	pushq   %rbp
+	movq    %rsp, %rbp
+	pushq   $1
+	pushq   $2
+	movq    %rbp, %rax
+	subq    %rsp, %rax
+	cmpq    $16, %rax
+	jl      _error
+	popq    %rcx
+	popq    %rax
+	addq    %rcx, %rax
+	pushq   %rax
+	pushq   $3
+	movq    %rbp, %rax
+	subq    %rsp, %rax
+	cmpq    $16, %rax
+	jl      _error
+	popq    %rcx
+	popq    %rax
+	imulq   %rcx
+	pushq   %rax
+	movq    %rbp, %rax
+	subq    %rsp, %rax
+	cmpq    $8, %rax
+	jl      _error
+	popq    %rax
+	movq    %rbp, %rsp
+	popq    %rbp
+	ret
+_error:
+	call    abort

@@ -6,58 +6,64 @@ from part3 import Actions, interpret
 class AssemblyActions(Actions[str]):
     def __init__(self) -> None:
         self.buffer = StringIO()
+        self._emit_header()
+        self._emit_prologue()
+
+    def _emit(self, insn: str, *args: str) -> None:
+        if len(args) == 0:
+            line = insn
+        else:
+            line = insn.ljust(8) + ", ".join(args)
+        self.buffer.write("\t" + line + "\n")
+
+    def _emit_header(self) -> None:
+        self.buffer.write(".global _expr\n\n")
         self.buffer.write(".section .text\n")
-        self.buffer.write(".global  _expr\n\n")
         self.buffer.write("_expr:\n")
-        self.emit_prologue()
 
-    def emit_prologue(self) -> None:
-        self.buffer.write("\tpushq  %rbp\n")
-        self.buffer.write("\tmovq   %rsp, %rbp\n")
+    def _emit_prologue(self) -> None:
+        self._emit("pushq", "%rbp")
+        self._emit("movq",  "%rsp", "%rbp")
 
-    def emit_epilogue(self) -> None:
-        self.buffer.write("\tmovq   %rbp, %rsp\n")
-        self.buffer.write("\tpopq   %rbp\n")
-        self.buffer.write("\tret\n\n")
+    def _emit_epilogue(self) -> None:
+        self._emit("movq", "%rbp", "%rsp")
+        self._emit("popq", "%rbp")
+        self._emit("ret")
 
-    def emit_stack_check(self, argc: int) -> None:
-        self.buffer.write("\tmovq   %rbp, %rax\n")
-        self.buffer.write("\tsubq   %rsp, %rax\n")
-        self.buffer.write(f"\tcmpq   ${argc * 8}, %rax\n")
-        self.buffer.write("\tjl     _error\n")
+    def _emit_stack_check(self, argc: int) -> None:
+        self._emit("movq", "%rbp", "%rax")
+        self._emit("subq", "%rsp", "%rax")
+        self._emit("cmpq", f"${argc * 8}", "%rax")
+        self._emit("jl",   "_error")
 
-    def emit_error_handler(self) -> None:
+    def _emit_error_handler(self) -> None:
         self.buffer.write("_error:\n")
-        self.buffer.write("\tcall   abort\n")
+        self._emit("call", "abort")
 
     def int_action(self, value: int) -> None:
-        self.buffer.write(f"\tpushq  ${value}\n")
+        self._emit("pushq", f"${value}")
 
     def add_op_action(self) -> None:
-        self.emit_stack_check(2)
-        self.buffer.write("\tpopq   %rcx\n")
-        self.buffer.write("\tpopq   %rax\n")
-        self.buffer.write("\taddq   %rcx, %rax\n")
-        self.buffer.write("\tpushq  %rax\n")
+        self._emit_stack_check(2)
+        self._emit("popq",  "%rcx")
+        self._emit("popq",  "%rax")
+        self._emit("addq",  "%rcx", "%rax")
+        self._emit("pushq", "%rax")
 
     def mul_op_action(self) -> None:
-        self.emit_stack_check(2)
-        self.buffer.write("\tpopq   %rcx\n")
-        self.buffer.write("\tpopq   %rax\n")
-        self.buffer.write("\timulq  %rcx\n")
-        self.buffer.write("\tpushq  %rax\n")
+        self._emit_stack_check(2)
+        self._emit("popq",  "%rcx")
+        self._emit("popq",  "%rax")
+        self._emit("imulq", "%rcx")
+        self._emit("pushq", "%rax")
 
     def get_result(self) -> str:
-        self.emit_stack_check(1)
-        self.buffer.write("\tpopq   %rax\n")
-        self.emit_epilogue()
-        self.emit_error_handler()
+        self._emit_stack_check(1)
+        self._emit("popq", "%rax")
+        self._emit_epilogue()
+        self._emit_error_handler()
         return self.buffer.getvalue()
 
 
 def translate(source: str) -> str:
     return interpret(source, AssemblyActions())
-
-
-with open("p0.s", "w") as fp:
-    fp.write(translate("1 2 + 3 *"))

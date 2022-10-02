@@ -1,0 +1,46 @@
+1
+---
+.global _expr
+
+.section .text
+_expr:
+	pushq   $1
+	popq    %rax
+	ret
+
+===
+1 2 +
+---
+.global _expr
+
+.section .text
+_expr:
+	pushq   $1
+	pushq   $2
+	popq    %rcx
+	popq    %rax
+	addq    %rcx, %rax
+	pushq   %rax
+	popq    %rax
+	ret
+
+===
+1 2 + 3 *
+---
+.global _expr
+
+.section .text
+_expr:
+	pushq   $1
+	pushq   $2
+	popq    %rcx
+	popq    %rax
+	addq    %rcx, %rax
+	pushq   %rax
+	pushq   $3
+	popq    %rcx
+	popq    %rax
+	imulq   %rcx
+	pushq   %rax
+	popq    %rax
+	ret

@@ -1,4 +1,5 @@
-from unittest import TestCase
+class EvaluationError(Exception):
+    pass
 
 
 def evaluate(source: str) -> int:
@@ -14,7 +15,7 @@ def evaluate(source: str) -> int:
                 if c == " ":
                     break
                 if c < "0" or c > "9":
-                    raise RuntimeError()
+                    raise EvaluationError()
                 pos += 1
             value = int(source[start:pos])
             stack.append(value)
@@ -31,16 +32,5 @@ def evaluate(source: str) -> int:
             a = stack.pop()
             stack.append(a * b)
         else:
-            raise RuntimeError()
+            raise EvaluationError()
     return stack.pop()
-
-
-class TestEvaluate(TestCase):
-    def test_evaluate(self) -> None:
-        for source, get_result in [
-            ("1 2 + 3 +", 6),
-            ("1 2 3 * +", 7),
-            ("1 2 + 3 *", 9),
-        ]:
-            with self.subTest():
-                self.assertEqual(evaluate(source), get_result)

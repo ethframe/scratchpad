@@ -51,12 +51,12 @@ class StackActions(Actions[int]):
     def add_op_action(self) -> None:
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append((a + b) & (2 ** 64 - 1))
+        self.stack.append(a + b)
 
     def mul_op_action(self) -> None:
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append((a * b) & (2 ** 64 - 1))
+        self.stack.append(a * b)
 
     def get_result(self) -> int:
         return self.stack.pop()

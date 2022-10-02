@@ -1,5 +1,4 @@
 from enum import Enum
-from unittest import TestCase
 
 
 class TokenKind(Enum):
@@ -52,14 +51,3 @@ def evaluate(source: str) -> int:
             stack.append(a * b)
         pos = end
     return stack.pop()
-
-
-class TestEvaluate1(TestCase):
-    def test_evaluate_1(self) -> None:
-        for source, get_result in [
-            ("1 2 + 3 +", 6),
-            ("1 2 3 * +", 7),
-            ("1 2 + 3 *", 9),
-        ]:
-            with self.subTest():
-                self.assertEqual(evaluate(source), get_result)
