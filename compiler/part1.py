@@ -7,7 +7,12 @@ def evaluate(source: str) -> int:
     pos = 0
     while pos < len(source):
         c = source[pos]
-        if "0" <= c and c <= "9":
+        if c == "0":
+            pos += 1
+            if pos < len(source) and source[pos] != " ":
+                raise EvaluationError()
+            stack.append(0)
+        elif "1" <= c and c <= "9":
             start = pos
             pos += 1
             while pos < len(source):
@@ -23,11 +28,15 @@ def evaluate(source: str) -> int:
             pos += 1
         elif c == "+":
             pos += 1
+            if pos < len(source) and source[pos] != " ":
+                raise EvaluationError()
             b = stack.pop()
             a = stack.pop()
             stack.append(a + b)
         elif c == "*":
             pos += 1
+            if pos < len(source) and source[pos] != " ":
+                raise EvaluationError()
             b = stack.pop()
             a = stack.pop()
             stack.append(a * b)
