@@ -1,9 +1,15 @@
 from abc import abstractmethod
+from enum import Enum
 from typing import Generic, TypeVar
 
 from part2 import TokenKind, scan
 
 A = TypeVar("A")
+
+
+class BinOpKind(Enum):
+    AddOp = 0
+    MulOp = 1
 
 
 class Actions(Generic[A]):
@@ -12,11 +18,7 @@ class Actions(Generic[A]):
         ...
 
     @abstractmethod
-    def add_op_action(self) -> None:
-        ...
-
-    @abstractmethod
-    def mul_op_action(self) -> None:
+    def bin_op_action(self, kind: BinOpKind) -> None:
         ...
 
     @abstractmethod
@@ -34,33 +36,32 @@ def interpret(source: str, act: Actions[A]) -> A:
             value = int(source[pos:end])
             act.int_action(value)
         elif token is TokenKind.AddOp:
-            act.add_op_action()
+            act.bin_op_action(BinOpKind.AddOp)
         elif token is TokenKind.MulOp:
-            act.mul_op_action()
+            act.bin_op_action(BinOpKind.MulOp)
         pos = end
     return act.get_result()
 
 
-class StackActions(Actions[int]):
+class StackAction(Actions[int]):
     def __init__(self) -> None:
         self.stack: list[int] = []
 
     def int_action(self, value: int) -> None:
         self.stack.append(value)
 
-    def add_op_action(self) -> None:
+    def bin_op_action(self, kind: BinOpKind) -> None:
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(a + b)
-
-    def mul_op_action(self) -> None:
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(a * b)
+        match kind:
+            case BinOpKind.AddOp:
+                self.stack.append(a + b)
+            case BinOpKind.MulOp:
+                self.stack.append(a * b)
 
     def get_result(self) -> int:
         return self.stack.pop()
 
 
 def evaluate(source: str) -> int:
-    return interpret(source, StackActions())
+    return interpret(source, StackAction())

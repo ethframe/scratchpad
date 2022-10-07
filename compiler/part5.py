@@ -1,6 +1,6 @@
 from io import StringIO
 
-from part3 import Actions, interpret
+from part3 import Actions, BinOpKind, interpret
 
 
 class AssemblyActions(Actions[str]):
@@ -43,18 +43,15 @@ class AssemblyActions(Actions[str]):
     def int_action(self, value: int) -> None:
         self._emit("pushq", f"${value}")
 
-    def add_op_action(self) -> None:
+    def bin_op_action(self, kind: BinOpKind) -> None:
         self._emit_stack_check(2)
         self._emit("popq",  "%rcx")
         self._emit("popq",  "%rax")
-        self._emit("addq",  "%rcx", "%rax")
-        self._emit("pushq", "%rax")
-
-    def mul_op_action(self) -> None:
-        self._emit_stack_check(2)
-        self._emit("popq",  "%rcx")
-        self._emit("popq",  "%rax")
-        self._emit("imulq", "%rcx")
+        match kind:
+            case BinOpKind.AddOp:
+                self._emit("addq",  "%rcx", "%rax")
+            case BinOpKind.MulOp:
+                self._emit("imulq", "%rcx")
         self._emit("pushq", "%rax")
 
     def get_result(self) -> str:

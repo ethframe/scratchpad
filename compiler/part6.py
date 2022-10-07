@@ -1,4 +1,4 @@
-from part3 import Actions, interpret
+from part3 import Actions, BinOpKind, interpret
 from part4 import AssemblyActions
 
 
@@ -13,12 +13,7 @@ class StackItemsActions(Actions[None]):
     def int_action(self, value: int) -> None:
         self.count += 1
 
-    def add_op_action(self) -> None:
-        if self.count < 2:
-            raise StackItemsError()
-        self.count -= 1
-
-    def mul_op_action(self) -> None:
+    def bin_op_action(self, kind: BinOpKind) -> None:
         if self.count < 2:
             raise StackItemsError()
         self.count -= 1

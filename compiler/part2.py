@@ -19,26 +19,16 @@ def scan(source: str, pos: int) -> tuple[TokenKind | None, int]:
     pos += 1
     if c == " ":
         return TokenKind.Space, pos
-    if c == "0":
-        if pos < len(source) and source[pos] != " ":
-            raise ScanError()
-        return TokenKind.Integer, pos
-    if "1" <= c and c <= "9":
+    if "0" <= c and c <= "9":
         while pos < len(source):
             c = source[pos]
-            if c == " ":
-                break
             if c < "0" or c > "9":
-                raise ScanError()
+                break
             pos += 1
         return TokenKind.Integer, pos
     if c == "+":
-        if pos < len(source) and source[pos] != " ":
-            raise ScanError()
         return TokenKind.AddOp, pos
     if c == "*":
-        if pos < len(source) and source[pos] != " ":
-            raise ScanError()
         return TokenKind.MulOp, pos
     raise ScanError()
 

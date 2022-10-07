@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 
-from part3 import Actions, interpret
+from part3 import Actions, BinOpKind, interpret
 from part4 import AssemblyActions
 from part6 import StackItemsActions
 
@@ -20,11 +20,7 @@ class InsnVisitor(ABC):
         ...
 
     @abstractmethod
-    def visit_add(self, insn: "Add") -> None:
-        ...
-
-    @abstractmethod
-    def visit_mul(self, insn: "Mul") -> None:
+    def visit_bin_op(self, insn: "BinOp") -> None:
         ...
 
 
@@ -36,14 +32,12 @@ class PushInt(Insn):
         visitor.visit_push_int(self)
 
 
-class Add(Insn):
-    def visit(self, visitor: InsnVisitor) -> None:
-        visitor.visit_add(self)
+class BinOp(Insn):
+    def __init__(self, kind: BinOpKind):
+        self.kind = kind
 
-
-class Mul(Insn):
     def visit(self, visitor: InsnVisitor) -> None:
-        visitor.visit_mul(self)
+        visitor.visit_bin_op(self)
 
 
 class InsnActions(Actions[list[Insn]]):
@@ -53,11 +47,8 @@ class InsnActions(Actions[list[Insn]]):
     def int_action(self, value: int) -> None:
         self.insns.append(PushInt(value))
 
-    def add_op_action(self) -> None:
-        self.insns.append(Add())
-
-    def mul_op_action(self) -> None:
-        self.insns.append(Mul())
+    def bin_op_action(self, kind: BinOpKind) -> None:
+        self.insns.append(BinOp(kind))
 
     def get_result(self) -> list[Insn]:
         return self.insns
@@ -74,11 +65,8 @@ class ActionsAdapter(Generic[A], InsnVisitor):
     def visit_push_int(self, insn: PushInt) -> None:
         self.actions.int_action(insn.value)
 
-    def visit_add(self, insn: Add) -> None:
-        self.actions.add_op_action()
-
-    def visit_mul(self, insn: Mul) -> None:
-        self.actions.mul_op_action()
+    def visit_bin_op(self, insn: BinOp) -> None:
+        self.actions.bin_op_action(insn.kind)
 
 
 def interpret_insns(insns: list[Insn], actions: Actions[A]) -> A:
