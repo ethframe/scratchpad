@@ -44,7 +44,7 @@ class AssemblyActions(Actions[str]):
             case BinOpKind.AddOp:
                 self.buffer.write("\taddq    %rcx, %rax\n")
             case BinOpKind.MulOp:
-                self.buffer.write("\timulq    %rcx\n")
+                self.buffer.write("\timulq   %rcx\n")
         self.buffer.write("\tpushq   %rax\n")
 
     def get_result(self) -> str:
