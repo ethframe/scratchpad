@@ -8,26 +8,24 @@ namespace astutil {
 
 namespace detail {
 
-template<typename T, typename, typename... As>
-struct select {
-    static inline auto impl(As &&...) {}
-};
-
-template<typename T, typename... As>
-struct select<T, std::void_t<decltype(T::call(std::declval<As>()...))>, As...> {
-    static inline auto impl(As &&...args) {
-        T::call(std::forward<As>(args)...);
-    }
-};
-
-template<typename T, typename... As>
+template<
+    typename T, typename... As,
+    typename std::enable_if_t<
+        std::is_invocable_v<decltype(std::declval<T>()), As...>, bool> = true>
 inline auto call_if(As &&...args) {
-    select<T, void, As...>::impl(std::forward<As>(args)...);
+    T{}(std::forward<As>(args)...);
 }
+
+template<
+    typename T, typename... As,
+    typename std::enable_if_t<
+        std::negation_v<std::is_invocable<decltype(std::declval<T>()), As...>>,
+        bool> = true>
+inline auto call_if(As &&...args) {}
 
 struct has_enter {
     template<typename T, typename V>
-    static inline auto call(T &&vis, V &&value)
+    inline auto operator()(T &&vis, V &&value)
         -> decltype(vis.enter(std::forward<V>(value))) {
         vis.enter(std::forward<V>(value));
     }
@@ -35,7 +33,7 @@ struct has_enter {
 
 struct has_exit {
     template<typename T, typename V>
-    static inline auto call(T &&vis, V &&value)
+    inline auto operator()(T &&vis, V &&value)
         -> decltype(vis.exit(std::forward<V>(value))) {
         vis.exit(std::forward<V>(value));
     }
@@ -43,7 +41,7 @@ struct has_exit {
 
 struct has_visit {
     template<typename T, typename V>
-    static inline auto call(T &&value, V &&vis)
+    inline auto operator()(T &&value, V &&vis)
         -> decltype(value.visit(std::forward<V>(vis))) {
         value.visit(std::forward<V>(vis));
     }
@@ -56,7 +54,7 @@ struct node {
     std::variant<std::unique_ptr<Ts>...> value;
 
     template<typename V>
-    auto visit(V &&vis) -> void {
+    auto visit(V &&vis) {
         std::visit(
             [&](auto &&v) {
                 detail::call_if<detail::has_enter>(std::forward<V>(vis), *v);
