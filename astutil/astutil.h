@@ -18,25 +18,22 @@ inline auto call_if(As &&...args) {
 
 struct has_enter {
     template<typename T, typename V>
-    inline auto operator()(T &&vis, V &&value)
-        -> decltype(vis.enter(std::forward<V>(value))) {
-        vis.enter(std::forward<V>(value));
+    inline auto operator()(T &&vis, V &&value) -> decltype(vis.enter(value)) {
+        return std::forward<T>(vis).enter(std::forward<V>(value));
     }
 };
 
 struct has_exit {
     template<typename T, typename V>
-    inline auto operator()(T &&vis, V &&value)
-        -> decltype(vis.exit(std::forward<V>(value))) {
-        vis.exit(std::forward<V>(value));
+    inline auto operator()(T &&vis, V &&value) -> decltype(vis.exit(value)) {
+        return std::forward<T>(vis).exit(std::forward<V>(value));
     }
 };
 
 struct has_visit {
     template<typename T, typename V>
-    inline auto operator()(T &&value, V &&vis)
-        -> decltype(value.visit(std::forward<V>(vis))) {
-        value.visit(std::forward<V>(vis));
+    inline auto operator()(T &&value, V &&vis) -> decltype(value.visit(vis)) {
+        return std::forward<T>(value).visit(std::forward<V>(vis));
     }
 };
 
