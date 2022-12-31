@@ -2,26 +2,19 @@
 #define ASTUTIL_H
 
 #include <memory>
+#include <type_traits>
 #include <variant>
 
 namespace astutil {
 
 namespace detail {
 
-template<
-    typename T, typename... As,
-    typename std::enable_if_t<
-        std::is_invocable_v<decltype(std::declval<T>()), As...>, bool> = true>
+template<typename T, typename... As>
 inline auto call_if(As &&...args) {
-    T{}(std::forward<As>(args)...);
+    if constexpr (std::is_invocable_v<decltype(std::declval<T>()), As...>) {
+        T{}(std::forward<As>(args)...);
+    }
 }
-
-template<
-    typename T, typename... As,
-    typename std::enable_if_t<
-        std::negation_v<std::is_invocable<decltype(std::declval<T>()), As...>>,
-        bool> = true>
-inline auto call_if(As &&...args) {}
 
 struct has_enter {
     template<typename T, typename V>
