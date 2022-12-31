@@ -9,6 +9,9 @@ namespace astutil {
 
 namespace detail {
 
+template<typename... Ts>
+using variant = std::variant<std::unique_ptr<Ts>...>;
+
 template<typename T, typename... As>
 inline auto call_if(As &&...args) {
     if constexpr (std::is_invocable_v<decltype(std::declval<T>()), As...>) {
@@ -18,40 +21,49 @@ inline auto call_if(As &&...args) {
 
 struct has_enter {
     template<typename T, typename V>
-    inline auto operator()(T &&vis, V &&value) -> decltype(vis.enter(value)) {
+    inline auto operator()(T &&vis, V &&value)
+        -> decltype(vis.enter(value)) const {
         return std::forward<T>(vis).enter(std::forward<V>(value));
     }
 };
 
 struct has_exit {
     template<typename T, typename V>
-    inline auto operator()(T &&vis, V &&value) -> decltype(vis.exit(value)) {
+    inline auto operator()(T &&vis, V &&value)
+        -> decltype(vis.exit(value)) const {
         return std::forward<T>(vis).exit(std::forward<V>(value));
     }
 };
 
 struct has_visit {
     template<typename T, typename V>
-    inline auto operator()(T &&value, V &&vis) -> decltype(value.visit(vis)) {
+    inline auto operator()(T &&value, V &&vis)
+        -> decltype(value.visit(vis)) const {
         return std::forward<T>(value).visit(std::forward<V>(vis));
     }
 };
+
+template<typename V, typename... Ts>
+inline auto visit(V &&vis, variant<Ts...> &&value) {
+    std::visit(
+        [&](auto &&v) {
+            call_if<has_enter>(std::forward<V>(vis), *v);
+            call_if<has_visit>(*v, std::forward<V>(vis));
+            call_if<has_exit>(std::forward<V>(vis), *v);
+        },
+        std::forward<variant<Ts...>>(value));
+}
 
 } // namespace detail
 
 template<typename... Ts>
 struct node {
-    std::variant<std::unique_ptr<Ts>...> value;
+    detail::variant<Ts...> value;
 
     template<typename V>
     auto visit(V &&vis) {
-        std::visit(
-            [&](auto &&v) {
-                detail::call_if<detail::has_enter>(std::forward<V>(vis), *v);
-                detail::call_if<detail::has_visit>(*v, std::forward<V>(vis));
-                detail::call_if<detail::has_exit>(std::forward<V>(vis), *v);
-            },
-            value);
+        detail::visit(std::forward<V>(vis),
+                      std::forward<detail::variant<Ts...>>(value));
     }
 };
 
@@ -66,9 +78,8 @@ struct variant_of {
 
 template<typename V, typename... As>
 auto make_node(As &&...args) {
-    using T = typename V::variant_of_t;
-    return T{
-        std::make_unique<V>(V{variant_of<T>{}, std::forward<As>(args)...})};
+    return typename V::variant_of_t{
+        std::make_unique<V>(V{{}, std::forward<As>(args)...})};
 }
 
 } // namespace astutil
