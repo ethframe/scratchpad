@@ -13,7 +13,7 @@ template<typename... Ts>
 using variant = std::variant<std::unique_ptr<Ts>...>;
 
 template<typename T, typename... As>
-inline auto call_if(As &&...args) {
+constexpr inline auto call_if(As &&...args) {
     if constexpr (std::is_invocable_v<decltype(std::declval<T>()), As...>) {
         T{}(std::forward<As>(args)...);
     }
@@ -21,7 +21,7 @@ inline auto call_if(As &&...args) {
 
 struct has_enter {
     template<typename T, typename V>
-    inline auto operator()(T &&vis, V &&value)
+    constexpr inline auto operator()(T &&vis, V &&value)
         -> decltype(vis.enter(value)) const {
         return std::forward<T>(vis).enter(std::forward<V>(value));
     }
@@ -29,7 +29,7 @@ struct has_enter {
 
 struct has_exit {
     template<typename T, typename V>
-    inline auto operator()(T &&vis, V &&value)
+    constexpr inline auto operator()(T &&vis, V &&value)
         -> decltype(vis.exit(value)) const {
         return std::forward<T>(vis).exit(std::forward<V>(value));
     }
@@ -37,14 +37,14 @@ struct has_exit {
 
 struct has_visit {
     template<typename T, typename V>
-    inline auto operator()(T &&value, V &&vis)
+    constexpr inline auto operator()(T &&value, V &&vis)
         -> decltype(value.visit(vis)) const {
         return std::forward<T>(value).visit(std::forward<V>(vis));
     }
 };
 
 template<typename V, typename... Ts>
-inline auto visit(V &&vis, variant<Ts...> &&value) {
+constexpr inline auto visit(V &&vis, variant<Ts...> &&value) {
     std::visit(
         [&](auto &&v) {
             call_if<has_enter>(std::forward<V>(vis), *v);
@@ -64,7 +64,7 @@ struct node {
     constexpr node(T &&v) : value{std::make_unique<T>(std::forward<T>(v))} {}
 
     template<typename V>
-    auto visit(V &&vis) {
+    constexpr auto visit(V &&vis) {
         detail::visit(std::forward<V>(vis),
                       std::forward<detail::variant<Ts...>>(value));
     }
