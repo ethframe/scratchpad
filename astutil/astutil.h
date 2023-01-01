@@ -60,27 +60,15 @@ template<typename... Ts>
 struct node {
     detail::variant<Ts...> value;
 
+    template<typename T>
+    constexpr node(T &&v) : value{std::make_unique<T>(std::forward<T>(v))} {}
+
     template<typename V>
     auto visit(V &&vis) {
         detail::visit(std::forward<V>(vis),
                       std::forward<detail::variant<Ts...>>(value));
     }
 };
-
-template<typename T>
-struct variant_of {
-  private:
-    using variant_of_t = T;
-
-    template<typename V, typename... As>
-    friend auto make_node(As &&...args);
-};
-
-template<typename V, typename... As>
-auto make_node(As &&...args) {
-    return typename V::variant_of_t{
-        std::make_unique<V>(V{{}, std::forward<As>(args)...})};
-}
 
 } // namespace astutil
 

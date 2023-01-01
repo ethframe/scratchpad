@@ -10,14 +10,14 @@ struct binary_expression;
 
 using expression = node<literal_expression, binary_expression>;
 
-struct literal_expression : variant_of<expression> {
+struct literal_expression {
     int value;
 
     template<typename V>
     auto visit(V &&) {}
 };
 
-struct binary_expression : variant_of<expression> {
+struct binary_expression {
     enum class op { add = 0, sub, mul, div };
     op op_;
     expression lhs;
@@ -35,9 +35,7 @@ auto make_expression() {
     using bin = binary_expression;
     using op = binary_expression::op;
 
-    return make_node<bin>(
-        op::add, make_node<lit>(1),
-        make_node<bin>(op::mul, make_node<lit>(2), make_node<lit>(3)));
+    return expression(bin{op::add, lit{1}, bin{op::mul, lit{2}, lit{3}}});
 }
 
 struct printer {
