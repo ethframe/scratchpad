@@ -2,12 +2,13 @@
 #define ASTUTIL_H
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <variant>
 
 namespace astutil {
 
-namespace detail {
+namespace details {
 
 template<typename... Ts>
 using variant = std::variant<std::unique_ptr<Ts>...>;
@@ -55,30 +56,49 @@ struct has_children {
     }
 };
 
+template<typename T, typename = void>
+struct is_optional : std::false_type {};
+template<typename T>
+struct is_optional<std::optional<T>> : std::true_type {};
+
 template<typename V, typename... Ts>
 constexpr inline auto visit(V &&vis, variant<Ts...> &&value) {
     return std::visit(
         [&](auto &&v) {
-            call_if<has_enter>(std::forward<V>(vis), *v);
-            call_if<has_visit>(*v, std::forward<V>(vis));
-            call_if<has_exit>(std::forward<V>(vis), *v);
+            using R = decltype(call_if<has_enter>(std::forward<V>(vis), *v));
+
+            if constexpr (std::is_same_v<R, bool>) {
+                if (call_if<has_enter>(std::forward<V>(vis), *v)) {
+                    call_if<has_children>(std::forward<V>(vis), *v);
+                }
+            }
+            else if constexpr (is_optional<R>::value) {
+                if (auto ret = call_if<has_enter>(std::forward<V>(vis), *v)) {
+                    call_if<has_children>(*ret, *v);
+                }
+            }
+            else {
+                call_if<has_enter>(std::forward<V>(vis), *v);
+                call_if<has_children>(std::forward<V>(vis), *v);
+            }
+            return call_if<has_exit>(std::forward<V>(vis), *v);
         },
         std::forward<variant<Ts...>>(value));
 }
 
-} // namespace detail
+} // namespace details
 
 template<typename... Ts>
 struct node {
-    detail::variant<Ts...> value;
+    details::variant<Ts...> value;
 
     template<typename T>
     constexpr node(T &&v) : value{std::make_unique<T>(std::forward<T>(v))} {}
 
     template<typename V>
     constexpr auto visit(V &&vis) {
-        detail::visit(std::forward<V>(vis),
-                      std::forward<detail::variant<Ts...>>(value));
+        details::visit(std::forward<V>(vis),
+                       std::forward<details::variant<Ts...>>(value));
     }
 };
 
