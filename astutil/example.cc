@@ -12,9 +12,6 @@ using expression = node<literal_expression, binary_expression>;
 
 struct literal_expression {
     int value;
-
-    template<typename V>
-    auto visit(V &&) {}
 };
 
 struct binary_expression {
