@@ -20,11 +20,7 @@ struct binary_expression {
     expression lhs;
     expression rhs;
 
-    template<typename V>
-    auto visit(V &&vis) {
-        lhs.visit(std::forward<V>(vis));
-        rhs.visit(std::forward<V>(vis));
-    }
+    auto children() { return std::tie(lhs, rhs); }
 };
 
 auto make_expression() {
@@ -38,9 +34,11 @@ auto make_expression() {
 struct printer {
     using op = binary_expression::op;
 
-    auto enter(literal_expression &e) { std::cout << e.value << " "; }
+    auto enter(literal_expression const &e) const {
+        std::cout << e.value << " ";
+    }
 
-    auto enter(binary_expression &e) {
+    auto enter(binary_expression const &e) const {
         std::cout << "(";
         switch (e.op_) {
         case op::add:
@@ -59,7 +57,7 @@ struct printer {
         std::cout << " ";
     }
 
-    auto exit(binary_expression &) { std::cout << ")"; }
+    auto exit(binary_expression const &) const { std::cout << ")"; }
 };
 
 struct evaluator {
@@ -67,9 +65,9 @@ struct evaluator {
 
     std::stack<int> stack;
 
-    auto exit(literal_expression &e) { stack.push(e.value); }
+    auto exit(literal_expression const &e) { stack.push(e.value); }
 
-    auto exit(binary_expression &e) {
+    auto exit(binary_expression const &e) {
         if (stack.size() < 2) {
             throw std::runtime_error("stack underflow");
         }
