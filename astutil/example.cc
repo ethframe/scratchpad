@@ -5,18 +5,10 @@
 
 using namespace astutil;
 
-struct literal_expression;
-struct binary_expression;
-
-using expression = node<literal_expression, binary_expression>;
-
-struct literal_expression {
-    int value;
-};
+using expression = node<int, struct binary_expression>;
 
 struct binary_expression {
-    enum class op { add = 0, sub, mul, div };
-    op op_;
+    enum class op { add = 0, sub, mul, div } op_;
     expression lhs;
     expression rhs;
 
@@ -24,18 +16,17 @@ struct binary_expression {
 };
 
 auto make_expression() {
-    using lit = literal_expression;
     using bin = binary_expression;
     using op = binary_expression::op;
 
-    return expression(bin{op::add, lit{1}, bin{op::mul, lit{2}, lit{3}}});
+    return expression(bin{op::add, 1, bin{op::mul, 2, 3}});
 }
 
 struct printer {
     using op = binary_expression::op;
 
-    auto enter(literal_expression const &e) const {
-        std::cout << e.value << " ";
+    auto enter(int const &e) const {
+        std::cout << e << " ";
     }
 
     auto enter(binary_expression const &e) const {
@@ -65,7 +56,7 @@ struct evaluator {
 
     std::stack<int> stack;
 
-    auto exit(literal_expression const &e) { stack.push(e.value); }
+    auto exit(int const &e) { stack.push(e); }
 
     auto exit(binary_expression const &e) {
         if (stack.size() < 2) {
