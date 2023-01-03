@@ -21,36 +21,34 @@ constexpr inline auto call_if(As &&...args) {
 }
 
 struct has_enter {
-    template<
-        typename T, typename V,
-        typename = decltype(std::declval<T &&>().enter(std::declval<V &&>()))>
-    constexpr inline auto operator()(T &&vis, V &&value) const {
+    template<typename T, typename V>
+    constexpr inline auto operator()(T &&vis, V &&value)
+        -> decltype(std::forward<T>(vis).enter(std::forward<V>(value))) const {
         return std::forward<T>(vis).enter(std::forward<V>(value));
     }
 };
 
 struct has_exit {
-    template<
-        typename T, typename V,
-        typename = decltype(std::declval<T &&>().exit(std::declval<V &&>()))>
-    constexpr inline auto operator()(T &&vis, V &&value) const {
+    template<typename T, typename V>
+    constexpr inline auto operator()(T &&vis, V &&value)
+        -> decltype(std::forward<T>(vis).exit(std::forward<V>(value))) const {
         return std::forward<T>(vis).exit(std::forward<V>(value));
     }
 };
 
 struct has_children {
-    template<typename T, typename V,
-             typename Tp = decltype(std::declval<V &&>().children()),
-             typename Idx = std::make_index_sequence<std::tuple_size_v<Tp>>>
-    constexpr inline auto operator()(T &&vis, V &&value) const {
+    template<typename T, typename V>
+    constexpr inline auto operator()(T &&vis, V &&value)
+        -> std::void_t<decltype(std::forward<V>(value).children())> const {
         visit_children(std::forward<T>(vis), std::forward<V>(value).children(),
-                       Idx{});
+                       std::make_index_sequence<std::tuple_size_v<
+                           decltype(std::forward<V>(value).children())>>{});
     }
 
-    template<typename T, typename Tp, typename I, I... ints>
+    template<typename T, typename Tp, typename I, I... idxs>
     constexpr static inline auto
-    visit_children(T &&vis, Tp &&children, std::integer_sequence<I, ints...>) {
-        ((std::get<ints>(std::forward<Tp>(children))
+    visit_children(T &&vis, Tp &&children, std::integer_sequence<I, idxs...>) {
+        ((std::get<idxs>(std::forward<Tp>(children))
               .visit(std::forward<T>(vis))),
          ...);
     }
