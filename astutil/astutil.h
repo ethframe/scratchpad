@@ -40,17 +40,11 @@ struct has_children {
     template<typename T, typename V>
     constexpr inline auto operator()(T &&vis, V &&value)
         -> std::void_t<decltype(std::forward<V>(value).children())> const {
-        visit_children(std::forward<T>(vis), std::forward<V>(value).children(),
-                       std::make_index_sequence<std::tuple_size_v<
-                           decltype(std::forward<V>(value).children())>>{});
-    }
-
-    template<typename T, typename Tp, typename I, I... idxs>
-    constexpr static inline auto
-    visit_children(T &&vis, Tp &&children, std::integer_sequence<I, idxs...>) {
-        ((std::get<idxs>(std::forward<Tp>(children))
-              .visit(std::forward<T>(vis))),
-         ...);
+        std::apply(
+            [&](auto &&...x) {
+                (std::forward<decltype(x)>(x).visit(std::forward<T>(vis)), ...);
+            },
+            std::forward<V>(value).children());
     }
 };
 
