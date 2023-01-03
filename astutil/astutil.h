@@ -36,13 +36,13 @@ struct has_exit {
     }
 };
 
-template<typename T, typename Tp>
-constexpr inline auto visit_tuple(T &&vis, Tp &&value) {
+template<typename T, typename... V>
+constexpr inline auto visit_tuple(T &&vis, std::tuple<V...> &&value) {
     std::apply(
         [&](auto &&...x) {
             (std::forward<decltype(x)>(x).visit(std::forward<T>(vis)), ...);
         },
-        std::forward<Tp>(value));
+        std::forward<std::tuple<V...>>(value));
 }
 
 struct has_children {
