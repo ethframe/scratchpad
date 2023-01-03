@@ -36,15 +36,20 @@ struct has_exit {
     }
 };
 
+template<typename T, typename Tp>
+constexpr inline auto visit_tuple(T &&vis, Tp &&value) {
+    std::apply(
+        [&](auto &&...x) {
+            (std::forward<decltype(x)>(x).visit(std::forward<T>(vis)), ...);
+        },
+        std::forward<Tp>(value));
+}
+
 struct has_children {
     template<typename T, typename V>
     constexpr inline auto operator()(T &&vis, V &&value)
         -> std::void_t<decltype(std::forward<V>(value).children())> const {
-        std::apply(
-            [&](auto &&...x) {
-                (std::forward<decltype(x)>(x).visit(std::forward<T>(vis)), ...);
-            },
-            std::forward<V>(value).children());
+        visit_tuple(std::forward<T>(vis), std::forward<V>(value).children());
     }
 };
 
