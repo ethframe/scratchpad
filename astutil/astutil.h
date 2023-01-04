@@ -15,11 +15,8 @@ using variant = std::variant<std::unique_ptr<Ts>...>;
 
 template<typename T>
 struct default_invocable : T {
-    template<typename... As>
-    constexpr static inline auto is_invocable_v =
-        std::is_invocable_v<decltype(std::declval<T>()), As...>;
-
-    template<typename... As, typename = std::enable_if_t<is_invocable_v<As...>>>
+    template<typename... As,
+             typename = std::enable_if_t<std::is_invocable_v<T, As...>>>
     constexpr inline auto operator()(As &&...args) const
         noexcept(noexcept(T::operator()(std::forward<As>(args)...)))
             -> decltype(T::operator()(std::forward<As>(args)...)) {
@@ -27,7 +24,7 @@ struct default_invocable : T {
     }
 
     template<typename... As,
-             typename = std::enable_if_t<!is_invocable_v<As...>>>
+             typename = std::enable_if_t<!std::is_invocable_v<T, As...>>>
     constexpr inline auto operator()(As &&...) const noexcept -> void {}
 };
 
@@ -39,7 +36,7 @@ struct invoke_enter {
         return std::forward<T>(vis).enter(std::forward<V>(value));
     }
 };
-constexpr auto enter = default_invocable<invoke_enter>{};
+constexpr inline auto enter = default_invocable<invoke_enter>{};
 
 struct invoke_exit {
     template<typename T, typename V,
@@ -49,7 +46,7 @@ struct invoke_exit {
         return std::forward<T>(vis).exit(std::forward<V>(value));
     }
 };
-constexpr auto exit = default_invocable<invoke_exit>{};
+constexpr inline auto exit = default_invocable<invoke_exit>{};
 
 template<typename T, typename V>
 constexpr inline auto visit_tuple(T &&vis, V &&value) -> void {
@@ -67,7 +64,8 @@ struct invoke_visit_children {
         visit_tuple(std::forward<T>(vis), std::forward<V>(value).children());
     }
 };
-constexpr auto visit_children = default_invocable<invoke_visit_children>{};
+constexpr inline auto visit_children =
+    default_invocable<invoke_visit_children>{};
 
 template<typename T, typename = void>
 struct is_optional : std::false_type {};
