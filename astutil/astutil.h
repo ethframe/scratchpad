@@ -19,28 +19,35 @@ template<typename... Ts>
 struct is_variant<variant<Ts...>> : std::true_type {};
 
 template<typename, typename T, typename... As>
-struct call_if_result {
+struct call_if_impl {
     using type = void;
+    constexpr static auto is_noexcept = true;
+    constexpr static inline auto impl(As &&...) noexcept -> void {}
 };
 template<typename T, typename... As>
-struct call_if_result<std::void_t<std::invoke_result_t<decltype(T{}), As...>>,
-                      T, As...> {
+struct call_if_impl<std::enable_if_t<std::is_invocable_v<decltype(T{}), As...>>,
+                    T, As...> {
     using type = std::invoke_result_t<decltype(T{}), As...>;
-};
-template<typename T, typename... As>
-using call_if_result_t = typename call_if_result<T, As...>::type;
-
-template<typename T, typename... As>
-constexpr inline auto call_if(As &&...args) -> call_if_result_t<T, As...> {
-    if constexpr (std::is_invocable_v<decltype(T{}), As...>) {
+    constexpr static auto is_noexcept =
+        std::is_nothrow_invocable_v<decltype(T{}), As...>;
+    constexpr static inline auto impl(As &&...args) noexcept(is_noexcept)
+        -> type {
         return T{}(std::forward<As>(args)...);
     }
+};
+
+template<typename T, typename... As>
+constexpr inline auto
+call_if(As &&...args) noexcept(call_if_impl<void, T, As...>::is_noexcept) ->
+    typename call_if_impl<void, T, As...>::type {
+    return call_if_impl<void, T, As...>::impl(std::forward<As>(args)...);
 }
 
 struct has_enter {
     template<typename T, typename V,
              typename = decltype(std::declval<T>().enter(std::declval<V>()))>
-    constexpr inline auto operator()(T &&vis, V &&value) const {
+    constexpr inline auto operator()(T &&vis, V &&value) const
+        noexcept(noexcept(std::forward<T>(vis).enter(std::forward<V>(value)))) {
         return std::forward<T>(vis).enter(std::forward<V>(value));
     }
 };
@@ -48,7 +55,8 @@ struct has_enter {
 struct has_exit {
     template<typename T, typename V,
              typename = decltype(std::declval<T>().exit(std::declval<V>()))>
-    constexpr inline auto operator()(T &&vis, V &&value) const {
+    constexpr inline auto operator()(T &&vis, V &&value) const
+        noexcept(noexcept(std::forward<T>(vis).exit(std::forward<V>(value)))) {
         return std::forward<T>(vis).exit(std::forward<V>(value));
     }
 };
