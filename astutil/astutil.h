@@ -2,7 +2,6 @@
 #define ASTUTIL_H
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <variant>
 
@@ -64,38 +63,12 @@ struct invoke_visit_children {
 constexpr inline auto visit_children =
     default_invocable<invoke_visit_children>{};
 
-template<typename T, typename = void>
-struct is_optional : std::false_type {};
-template<typename T>
-struct is_optional<std::optional<T>> : std::true_type {};
-template<typename T>
-constexpr inline auto is_optional_v = is_optional<T>::value;
-
 template<typename V, typename T>
 constexpr inline auto visit(V &&vis, T &&value) {
     return std::visit(
         [&](auto &&v) {
-            using result = decltype(enter(std::forward<V>(vis),
-                                          *std::forward<decltype(v)>(v)));
-
-            if constexpr (std::is_same_v<result, bool>) {
-                if (enter(std::forward<V>(vis),
-                          *std::forward<decltype(v)>(v))) {
-                    visit_children(std::forward<V>(vis),
-                                   *std::forward<decltype(v)>(v));
-                }
-            }
-            else if constexpr (is_optional_v<std::decay_t<result>>) {
-                if (auto ret = enter(std::forward<V>(vis),
-                                     *std::forward<decltype(v)>(v))) {
-                    visit_children(*ret, *std::forward<decltype(v)>(v));
-                }
-            }
-            else {
-                enter(std::forward<V>(vis), *std::forward<decltype(v)>(v));
-                visit_children(std::forward<V>(vis),
-                               *std::forward<decltype(v)>(v));
-            }
+            enter(std::forward<V>(vis), *std::forward<decltype(v)>(v));
+            visit_children(std::forward<V>(vis), *std::forward<decltype(v)>(v));
             return exit(std::forward<V>(vis), *std::forward<decltype(v)>(v));
         },
         std::forward<T>(value));
@@ -112,13 +85,15 @@ struct node {
     constexpr node(T &&v) : value{std::make_unique<T>(std::forward<T>(v))} {}
 
     template<typename V>
-    constexpr auto visit(V &&vis) -> void {
-        details::visit(std::forward<V>(vis), value);
+    constexpr auto visit(V &&vis)
+        -> decltype(details::visit(std::forward<V>(vis), value)) {
+        return details::visit(std::forward<V>(vis), value);
     }
 
     template<typename V>
-    constexpr auto visit(V &&vis) const -> void {
-        details::visit(std::forward<V>(vis), value);
+    constexpr auto visit(V &&vis) const
+        -> decltype(details::visit(std::forward<V>(vis), value)) {
+        return details::visit(std::forward<V>(vis), value);
     }
 };
 

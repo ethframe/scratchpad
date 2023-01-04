@@ -81,6 +81,7 @@ struct evaluator {
             break;
         }
     }
+
     auto result() const {
         if (stack.empty()) {
             throw std::runtime_error("stack underflow");
