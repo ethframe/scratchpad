@@ -17,6 +17,11 @@ template<typename T, typename = void>
 struct is_variant : std::false_type {};
 template<typename... Ts>
 struct is_variant<variant<Ts...>> : std::true_type {};
+template<typename T>
+constexpr inline auto is_variant_v = is_variant<T>::value;
+
+template<typename T>
+using declval_t = decltype(std::declval<T>());
 
 template<typename, typename T, typename... As>
 struct call_if_impl {
@@ -25,17 +30,16 @@ struct call_if_impl {
     constexpr static inline auto impl(As &&...) noexcept -> void {}
 };
 template<typename T, typename... As>
-struct call_if_impl<std::enable_if_t<std::is_invocable_v<decltype(T{}), As...>>,
+struct call_if_impl<std::enable_if_t<std::is_invocable_v<declval_t<T>, As...>>,
                     T, As...> {
-    using type = std::invoke_result_t<decltype(T{}), As...>;
+    using type = std::invoke_result_t<declval_t<T>, As...>;
     constexpr static auto is_noexcept =
-        std::is_nothrow_invocable_v<decltype(T{}), As...>;
+        std::is_nothrow_invocable_v<declval_t<T>, As...>;
     constexpr static inline auto impl(As &&...args) noexcept(is_noexcept)
         -> type {
         return T{}(std::forward<As>(args)...);
     }
 };
-
 template<typename T, typename... As>
 constexpr inline auto
 call_if(As &&...args) noexcept(call_if_impl<void, T, As...>::is_noexcept) ->
@@ -65,10 +69,11 @@ template<typename T, typename = void>
 struct is_tuple : std::false_type {};
 template<typename... T>
 struct is_tuple<std::tuple<T...>> : std::true_type {};
+template<typename T>
+constexpr inline auto is_tuple_v = is_tuple<T>::value;
 
 template<typename T, typename V,
-         typename = std::enable_if_t<
-             is_tuple<std::remove_cv_t<std::remove_reference_t<V>>>::value>>
+         typename = std::enable_if_t<is_tuple_v<std::decay_t<V>>>>
 constexpr inline auto visit_tuple(T &&vis, V &&value) -> void {
     std::apply(
         [&](auto &&...x) {
@@ -89,10 +94,11 @@ template<typename T, typename = void>
 struct is_optional : std::false_type {};
 template<typename T>
 struct is_optional<std::optional<T>> : std::true_type {};
+template<typename T>
+constexpr inline auto is_optional_v = is_optional<T>::value;
 
 template<typename V, typename T,
-         typename = std::enable_if_t<
-             is_variant<std::remove_cv_t<std::remove_reference_t<T>>>::value>>
+         typename = std::enable_if_t<is_variant_v<std::decay_t<T>>>>
 constexpr inline auto visit(V &&vis, T &&value) {
     return std::visit(
         [&](auto &&v) {
@@ -103,7 +109,7 @@ constexpr inline auto visit(V &&vis, T &&value) {
                     call_if<has_children>(std::forward<V>(vis), *v);
                 }
             }
-            else if constexpr (is_optional<R>::value) {
+            else if constexpr (is_optional_v<R>) {
                 if (auto ret = call_if<has_enter>(std::forward<V>(vis), *v)) {
                     call_if<has_children>(*ret, *v);
                 }
