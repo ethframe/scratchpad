@@ -18,8 +18,20 @@ struct is_variant : std::false_type {};
 template<typename... Ts>
 struct is_variant<variant<Ts...>> : std::true_type {};
 
+template<typename, typename T, typename... As>
+struct call_if_result {
+    using type = void;
+};
 template<typename T, typename... As>
-constexpr inline auto call_if(As &&...args) {
+struct call_if_result<std::void_t<std::invoke_result_t<decltype(T{}), As...>>,
+                      T, As...> {
+    using type = std::invoke_result_t<decltype(T{}), As...>;
+};
+template<typename T, typename... As>
+using call_if_result_t = typename call_if_result<T, As...>::type;
+
+template<typename T, typename... As>
+constexpr inline auto call_if(As &&...args) -> call_if_result_t<T, As...> {
     if constexpr (std::is_invocable_v<decltype(T{}), As...>) {
         return T{}(std::forward<As>(args)...);
     }
@@ -47,7 +59,8 @@ template<typename... T>
 struct is_tuple<std::tuple<T...>> : std::true_type {};
 
 template<typename T, typename V,
-         typename = std::enable_if_t<is_tuple<V>::value>>
+         typename = std::enable_if_t<
+             is_tuple<std::remove_cv_t<std::remove_reference_t<V>>>::value>>
 constexpr inline auto visit_tuple(T &&vis, V &&value) -> void {
     std::apply(
         [&](auto &&...x) {
