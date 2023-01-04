@@ -13,6 +13,11 @@ namespace details {
 template<typename... Ts>
 using variant = std::variant<std::unique_ptr<Ts>...>;
 
+template<typename T, typename = void>
+struct is_variant : std::false_type {};
+template<typename... Ts>
+struct is_variant<variant<Ts...>> : std::true_type {};
+
 template<typename T, typename... As>
 constexpr inline auto call_if(As &&...args) {
     if constexpr (std::is_invocable_v<decltype(T{}), As...>) {
@@ -36,13 +41,19 @@ struct has_exit {
     }
 };
 
-template<typename T, typename... V>
-constexpr inline auto visit_tuple(T &&vis, std::tuple<V...> &&value) -> void {
+template<typename T, typename = void>
+struct is_tuple : std::false_type {};
+template<typename... T>
+struct is_tuple<std::tuple<T...>> : std::true_type {};
+
+template<typename T, typename V,
+         typename = std::enable_if_t<is_tuple<V>::value>>
+constexpr inline auto visit_tuple(T &&vis, V &&value) -> void {
     std::apply(
         [&](auto &&...x) {
             (std::forward<decltype(x)>(x).visit(std::forward<T>(vis)), ...);
         },
-        std::forward<std::tuple<V...>>(value));
+        std::forward<V>(value));
 }
 
 struct has_children {
@@ -58,8 +69,10 @@ struct is_optional : std::false_type {};
 template<typename T>
 struct is_optional<std::optional<T>> : std::true_type {};
 
-template<typename V, typename... Ts>
-constexpr inline auto visit(V &&vis, variant<Ts...> &&value) {
+template<typename V, typename T,
+         typename = std::enable_if_t<
+             is_variant<std::remove_cv_t<std::remove_reference_t<T>>>::value>>
+constexpr inline auto visit(V &&vis, T &&value) {
     return std::visit(
         [&](auto &&v) {
             using R = decltype(call_if<has_enter>(std::forward<V>(vis), *v));
@@ -80,7 +93,7 @@ constexpr inline auto visit(V &&vis, variant<Ts...> &&value) {
             }
             return call_if<has_exit>(std::forward<V>(vis), *v);
         },
-        std::forward<variant<Ts...>>(value));
+        std::forward<T>(value));
 }
 
 } // namespace details
@@ -95,8 +108,12 @@ struct node {
 
     template<typename V>
     constexpr auto visit(V &&vis) -> void {
-        details::visit(std::forward<V>(vis),
-                       std::forward<details::variant<Ts...>>(value));
+        details::visit(std::forward<V>(vis), value);
+    }
+
+    template<typename V>
+    constexpr auto visit(V &&vis) const -> void {
+        details::visit(std::forward<V>(vis), value);
     }
 };
 

@@ -84,7 +84,7 @@ struct evaluator {
 };
 
 int main() {
-    auto expr = make_expression();
+    const auto expr = make_expression();
 
     printer p;
     expr.visit(p); // Prints "(+ 1 (* 2 3 ))"
