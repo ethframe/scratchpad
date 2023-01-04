@@ -48,7 +48,7 @@ constexpr inline auto call_if_invocable(As &&...args) noexcept(
         std::forward<As>(args)...);
 }
 
-struct has_enter {
+struct enter {
     template<typename T, typename V,
              typename = decltype(std::declval<T>().enter(std::declval<V>()))>
     constexpr inline auto operator()(T &&vis, V &&value) const
@@ -57,7 +57,7 @@ struct has_enter {
     }
 };
 
-struct has_exit {
+struct exit {
     template<typename T, typename V,
              typename = decltype(std::declval<T>().exit(std::declval<V>()))>
     constexpr inline auto operator()(T &&vis, V &&value) const
@@ -83,7 +83,7 @@ constexpr inline auto visit_tuple(T &&vis, V &&value) -> void {
         std::forward<V>(value));
 }
 
-struct has_children {
+struct visit_children {
     template<typename T, typename V,
              typename = decltype(std::declval<V>().children())>
     constexpr inline auto operator()(T &&vis, V &&value) const -> void {
@@ -103,25 +103,25 @@ template<typename V, typename T,
 constexpr inline auto visit(V &&vis, T &&value) {
     return std::visit(
         [&](auto &&v) {
-            using R = decltype(call_if_invocable<has_enter>(
-                std::forward<V>(vis), *v));
+            using R =
+                decltype(call_if_invocable<enter>(std::forward<V>(vis), *v));
 
             if constexpr (std::is_same_v<R, bool>) {
-                if (call_if_invocable<has_enter>(std::forward<V>(vis), *v)) {
-                    call_if_invocable<has_children>(std::forward<V>(vis), *v);
+                if (call_if_invocable<enter>(std::forward<V>(vis), *v)) {
+                    call_if_invocable<visit_children>(std::forward<V>(vis), *v);
                 }
             }
             else if constexpr (is_optional_v<R>) {
-                if (auto ret = call_if_invocable<has_enter>(
-                        std::forward<V>(vis), *v)) {
-                    call_if_invocable<has_children>(*ret, *v);
+                if (auto ret =
+                        call_if_invocable<enter>(std::forward<V>(vis), *v)) {
+                    call_if_invocable<visit_children>(*ret, *v);
                 }
             }
             else {
-                call_if_invocable<has_enter>(std::forward<V>(vis), *v);
-                call_if_invocable<has_children>(std::forward<V>(vis), *v);
+                call_if_invocable<enter>(std::forward<V>(vis), *v);
+                call_if_invocable<visit_children>(std::forward<V>(vis), *v);
             }
-            return call_if_invocable<has_exit>(std::forward<V>(vis), *v);
+            return call_if_invocable<exit>(std::forward<V>(vis), *v);
         },
         std::forward<T>(value));
 }
