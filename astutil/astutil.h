@@ -10,9 +10,6 @@ namespace astutil {
 
 namespace details {
 
-template<typename... Ts>
-using variant = std::variant<std::unique_ptr<Ts>...>;
-
 template<typename T>
 struct default_invocable : T {
     template<typename... As,
@@ -78,23 +75,28 @@ template<typename V, typename T>
 constexpr inline auto visit(V &&vis, T &&value) {
     return std::visit(
         [&](auto &&v) {
-            using result = decltype(enter(std::forward<V>(vis), *v));
+            using result = decltype(enter(std::forward<V>(vis),
+                                          *std::forward<decltype(v)>(v)));
 
             if constexpr (std::is_same_v<result, bool>) {
-                if (enter(std::forward<V>(vis), *v)) {
-                    visit_children(std::forward<V>(vis), *v);
+                if (enter(std::forward<V>(vis),
+                          *std::forward<decltype(v)>(v))) {
+                    visit_children(std::forward<V>(vis),
+                                   *std::forward<decltype(v)>(v));
                 }
             }
             else if constexpr (is_optional_v<std::decay_t<result>>) {
-                if (auto ret = enter(std::forward<V>(vis), *v)) {
-                    visit_children(*ret, *v);
+                if (auto ret = enter(std::forward<V>(vis),
+                                     *std::forward<decltype(v)>(v))) {
+                    visit_children(*ret, *std::forward<decltype(v)>(v));
                 }
             }
             else {
-                enter(std::forward<V>(vis), *v);
-                visit_children(std::forward<V>(vis), *v);
+                enter(std::forward<V>(vis), *std::forward<decltype(v)>(v));
+                visit_children(std::forward<V>(vis),
+                               *std::forward<decltype(v)>(v));
             }
-            return exit(std::forward<V>(vis), *v);
+            return exit(std::forward<V>(vis), *std::forward<decltype(v)>(v));
         },
         std::forward<T>(value));
 }
@@ -103,7 +105,7 @@ constexpr inline auto visit(V &&vis, T &&value) {
 
 template<typename... Ts>
 struct node {
-    details::variant<Ts...> value;
+    std::variant<std::unique_ptr<Ts>...> value;
 
     template<typename T, typename = std::enable_if_t<
                              !std::is_same_v<node<Ts...>, std::decay_t<T>>>>

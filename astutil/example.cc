@@ -81,6 +81,12 @@ struct evaluator {
             break;
         }
     }
+    auto result() const {
+        if (stack.empty()) {
+            throw std::runtime_error("stack underflow");
+        }
+        return stack.top();
+    }
 };
 
 int main() {
@@ -91,5 +97,5 @@ int main() {
 
     evaluator e;
     expr.visit(e);
-    std::cout << " => " << e.stack.top() << std::endl; // Prints " => 7"
+    std::cout << " => " << e.result() << std::endl; // Prints " => 7"
 }
