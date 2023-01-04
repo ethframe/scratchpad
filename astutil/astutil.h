@@ -21,23 +21,23 @@ constexpr inline auto call_if(As &&...args) {
 }
 
 struct has_enter {
-    template<typename T, typename V>
-    constexpr inline auto operator()(T &&vis, V &&value)
-        -> decltype(std::forward<T>(vis).enter(std::forward<V>(value))) const {
+    template<typename T, typename V,
+             typename = decltype(std::declval<T>().enter(std::declval<V>()))>
+    constexpr inline auto operator()(T &&vis, V &&value) const {
         return std::forward<T>(vis).enter(std::forward<V>(value));
     }
 };
 
 struct has_exit {
-    template<typename T, typename V>
-    constexpr inline auto operator()(T &&vis, V &&value)
-        -> decltype(std::forward<T>(vis).exit(std::forward<V>(value))) const {
+    template<typename T, typename V,
+             typename = decltype(std::declval<T>().exit(std::declval<V>()))>
+    constexpr inline auto operator()(T &&vis, V &&value) const {
         return std::forward<T>(vis).exit(std::forward<V>(value));
     }
 };
 
 template<typename T, typename... V>
-constexpr inline auto visit_tuple(T &&vis, std::tuple<V...> &&value) {
+constexpr inline auto visit_tuple(T &&vis, std::tuple<V...> &&value) -> void {
     std::apply(
         [&](auto &&...x) {
             (std::forward<decltype(x)>(x).visit(std::forward<T>(vis)), ...);
@@ -46,9 +46,9 @@ constexpr inline auto visit_tuple(T &&vis, std::tuple<V...> &&value) {
 }
 
 struct has_children {
-    template<typename T, typename V>
-    constexpr inline auto operator()(T &&vis, V &&value)
-        -> std::void_t<decltype(std::forward<V>(value).children())> const {
+    template<typename T, typename V,
+             typename = decltype(std::declval<V>().children())>
+    constexpr inline auto operator()(T &&vis, V &&value) const -> void {
         visit_tuple(std::forward<T>(vis), std::forward<V>(value).children());
     }
 };
@@ -89,11 +89,12 @@ template<typename... Ts>
 struct node {
     details::variant<Ts...> value;
 
-    template<typename T>
+    template<typename T, typename = std::enable_if_t<
+                             !std::is_same_v<node<Ts...>, std::decay_t<T>>>>
     constexpr node(T &&v) : value{std::make_unique<T>(std::forward<T>(v))} {}
 
     template<typename V>
-    constexpr auto visit(V &&vis) {
+    constexpr auto visit(V &&vis) -> void {
         details::visit(std::forward<V>(vis),
                        std::forward<details::variant<Ts...>>(value));
     }

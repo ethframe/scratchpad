@@ -25,9 +25,7 @@ auto make_expression() {
 struct printer {
     using op = binary_expression::op;
 
-    auto enter(int const &e) const {
-        std::cout << e << " ";
-    }
+    auto enter(int const &e) const { std::cout << e << " "; }
 
     auto enter(binary_expression const &e) const {
         std::cout << "(";
