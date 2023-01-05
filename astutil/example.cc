@@ -46,7 +46,7 @@ struct printer {
         std::cout << " ";
     }
 
-    auto exit(binary_expression const &) const { std::cout << ")"; }
+    auto exit(binary_expression const &) const { std::cout << ") "; }
 };
 
 struct evaluator {
@@ -94,9 +94,9 @@ int main() {
     const auto expr = make_expression();
 
     printer p;
-    expr.visit(p); // Prints "(+ 1 (* 2 3 ))"
+    expr.visit(p); // Prints "(+ 1 (* 2 3 )) "
 
     evaluator e;
     expr.visit(e);
-    std::cout << " => " << e.result() << std::endl; // Prints " => 7"
+    std::cout << "=> " << e.result() << std::endl; // Prints "=> 7"
 }
