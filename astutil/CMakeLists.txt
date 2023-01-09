@@ -8,8 +8,7 @@ add_executable(example
 set_property(TARGET example PROPERTY CXX_STANDARD 17)
 
 if(NOT MSVC)
-    target_compile_options(example
-        PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 endif()
 
 install(TARGETS
