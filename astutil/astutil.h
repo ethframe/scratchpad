@@ -85,13 +85,13 @@ struct node {
 
     template<typename V>
     constexpr auto visit(V &&vis)
-        -> decltype(details::visit(std::forward<V>(vis), value)) {
+        -> decltype(details::visit(std::declval<V>(), value)) {
         return details::visit(std::forward<V>(vis), value);
     }
 
     template<typename V>
     constexpr auto visit(V &&vis) const
-        -> decltype(details::visit(std::forward<V>(vis), value)) {
+        -> decltype(details::visit(std::declval<V>(), value)) {
         return details::visit(std::forward<V>(vis), value);
     }
 };
