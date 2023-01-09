@@ -1,9 +1,11 @@
 #ifndef ASTUTIL_H
 #define ASTUTIL_H
 
+#include <iterator>
 #include <memory>
 #include <type_traits>
 #include <variant>
+#include <vector>
 
 namespace astutil {
 
@@ -63,7 +65,9 @@ struct invoke_visit_children {
 constexpr auto visit_children = default_invocable<invoke_visit_children>{};
 
 template<typename V, typename T>
-constexpr auto visit(V &&vis, T &&value) {
+constexpr auto visit(V &&vis, T &&value) -> decltype(exit(
+    std::declval<V>(),
+    std::declval<std::variant_alternative_t<0, std::decay_t<T>>>())) {
     return std::visit(
         [&](auto &&v) {
             enter(std::forward<V>(vis), *std::forward<decltype(v)>(v));
@@ -73,10 +77,22 @@ constexpr auto visit(V &&vis, T &&value) {
         std::forward<T>(value));
 }
 
+template<typename T, typename... Ts>
+constexpr auto move_to_vector(Ts &&...vs) {
+    T init[]{std::forward<Ts>(vs)...};
+    return std::vector<T>(std::make_move_iterator(std::begin(init)),
+                          std::make_move_iterator(std::end(init)));
+}
+
 } // namespace details
 
 template<typename... Ts>
+struct nodes;
+
+template<typename... Ts>
 struct node {
+    using nodes = nodes<Ts...>;
+
     std::variant<std::unique_ptr<Ts>...> value;
 
     template<typename T, typename = std::enable_if_t<
@@ -93,6 +109,35 @@ struct node {
     constexpr auto visit(V &&vis) const
         -> decltype(details::visit(std::declval<V>(), value)) {
         return details::visit(std::forward<V>(vis), value);
+    }
+};
+
+template<typename... Ts>
+struct nodes {
+    using node = node<Ts...>;
+
+    std::vector<node> values;
+
+    template<typename... As>
+    constexpr nodes(As &&...vs)
+        : values{details::move_to_vector<node>(std::forward<As>(vs)...)} {}
+
+    constexpr auto size() const noexcept(noexcept(std::size(values))) {
+        return std::size(values);
+    }
+
+    template<typename V>
+    constexpr auto visit(V &&vis) -> void {
+        for (auto &x : values) {
+            x.visit(std::forward<V>(vis));
+        }
+    }
+
+    template<typename V>
+    constexpr auto visit(V &&vis) const -> void {
+        for (const auto &x : values) {
+            x.visit(std::forward<V>(vis));
+        }
     }
 };
 

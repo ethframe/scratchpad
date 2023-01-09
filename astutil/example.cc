@@ -5,7 +5,7 @@
 
 using namespace astutil;
 
-using expression = node<int, struct binary_expression>;
+using expression = node<int, struct binary_expression, struct nary_expression>;
 
 struct binary_expression {
     enum class op { add = 0, sub, mul, div } op_;
@@ -15,31 +15,42 @@ struct binary_expression {
     auto children() { return std::tie(lhs, rhs); }
 };
 
+struct nary_expression {
+    enum class op { sum = 0 } op_;
+    expression::nodes args;
+
+    auto children() { return std::tie(args); }
+};
+
 auto make_expression() {
     using bin = binary_expression;
-    using op = binary_expression::op;
+    using nary = nary_expression;
+    using bop = binary_expression::op;
+    using nop = nary_expression::op;
 
-    return expression(bin{op::add, 1, bin{op::mul, 2, 3}});
+    return expression{
+        nary{nop::sum, {bin{bop::add, 1, bin{bop::mul, 2, 3}}, 8}}};
 }
 
 struct printer {
-    using op = binary_expression::op;
+    using bop = binary_expression::op;
+    using nop = nary_expression::op;
 
     auto enter(int const &e) const { std::cout << e << " "; }
 
     auto enter(binary_expression const &e) const {
         std::cout << "(";
         switch (e.op_) {
-        case op::add:
+        case bop::add:
             std::cout << "+";
             break;
-        case op::sub:
+        case bop::sub:
             std::cout << "-";
             break;
-        case op::mul:
+        case bop::mul:
             std::cout << "*";
             break;
-        case op::div:
+        case bop::div:
             std::cout << "/";
             break;
         }
@@ -47,10 +58,23 @@ struct printer {
     }
 
     auto exit(binary_expression const &) const { std::cout << ") "; }
+
+    auto enter(nary_expression const &e) const {
+        std::cout << "(";
+        switch (e.op_) {
+        case nop::sum:
+            std::cout << "sum";
+            break;
+        }
+        std::cout << " ";
+    }
+
+    auto exit(nary_expression const &) const { std::cout << ") "; }
 };
 
 struct evaluator {
-    using op = binary_expression::op;
+    using bop = binary_expression::op;
+    using nop = nary_expression::op;
 
     std::stack<int> stack;
 
@@ -67,17 +91,34 @@ struct evaluator {
         stack.pop();
 
         switch (e.op_) {
-        case op::add:
+        case bop::add:
             stack.push(a + b);
             break;
-        case op::sub:
+        case bop::sub:
             stack.push(a - b);
             break;
-        case op::mul:
+        case bop::mul:
             stack.push(a * b);
             break;
-        case op::div:
+        case bop::div:
             stack.push(a / b);
+            break;
+        }
+    }
+
+    auto exit(nary_expression const &e) {
+        if (stack.size() < std::size(e.args)) {
+            throw std::runtime_error("stack underflow");
+        }
+
+        switch (e.op_) {
+        case nop::sum:
+            auto sum = 0;
+            for (auto i = 0; i < std::size(e.args); ++i) {
+                sum += stack.top();
+                stack.pop();
+            }
+            stack.push(sum);
             break;
         }
     }
@@ -94,9 +135,9 @@ int main() {
     const auto expr = make_expression();
 
     printer p;
-    expr.visit(p); // Prints "(+ 1 (* 2 3 )) "
+    expr.visit(p); // Prints "(sum (+ 1 (* 2 3 ) ) 8 )"
 
     evaluator e;
     expr.visit(e);
-    std::cout << "=> " << e.result() << std::endl; // Prints "=> 7"
+    std::cout << "=> " << e.result() << std::endl; // Prints "=> 15"
 }
