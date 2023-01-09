@@ -29,7 +29,7 @@ auto make_expression() {
     using nop = nary_expression::op;
 
     return expression{
-        nary{nop::sum, {bin{bop::add, 1, bin{bop::mul, 2, 3}}, 8}}};
+        nary{nop::sum, {bin{bop::add, 1, bin{bop::mul, 2, 3}}, 8, 9}}};
 }
 
 struct printer {
@@ -135,9 +135,9 @@ int main() {
     const auto expr = make_expression();
 
     printer p;
-    expr.visit(p); // Prints "(sum (+ 1 (* 2 3 ) ) 8 )"
+    expr.visit(p); // Prints "(sum (+ 1 (* 2 3 ) ) 8 9 )"
 
     evaluator e;
     expr.visit(e);
-    std::cout << "=> " << e.result() << std::endl; // Prints "=> 15"
+    std::cout << "=> " << e.result() << std::endl; // Prints "=> 24"
 }
