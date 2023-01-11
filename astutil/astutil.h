@@ -87,12 +87,7 @@ constexpr auto move_to_vector(Ts &&...vs) {
 } // namespace details
 
 template<typename... Ts>
-struct nodes;
-
-template<typename... Ts>
 struct node {
-    using nodes = nodes<Ts...>;
-
     std::variant<std::unique_ptr<Ts>...> value;
 
     template<typename T, typename = std::enable_if_t<
@@ -110,35 +105,34 @@ struct node {
         -> decltype(details::visit(std::declval<V>(), value)) {
         return details::visit(std::forward<V>(vis), value);
     }
-};
 
-template<typename... Ts>
-struct nodes {
-    using node = node<Ts...>;
+    struct nodes {
+        using node = node<Ts...>;
 
-    std::vector<node> values;
+        std::vector<node> values;
 
-    template<typename... As>
-    constexpr nodes(As &&...vs)
-        : values{details::move_to_vector<node>(std::forward<As>(vs)...)} {}
+        template<typename... As>
+        constexpr nodes(As &&...vs)
+            : values{details::move_to_vector<node>(std::forward<As>(vs)...)} {}
 
-    constexpr auto size() const noexcept(noexcept(std::size(values))) {
-        return std::size(values);
-    }
-
-    template<typename V>
-    constexpr auto visit(V &&vis) -> void {
-        for (auto &x : values) {
-            x.visit(std::forward<V>(vis));
+        constexpr auto size() const noexcept(noexcept(std::size(values))) {
+            return std::size(values);
         }
-    }
 
-    template<typename V>
-    constexpr auto visit(V &&vis) const -> void {
-        for (const auto &x : values) {
-            x.visit(std::forward<V>(vis));
+        template<typename V>
+        constexpr auto visit(V &&vis) -> void {
+            for (auto &x : values) {
+                x.visit(std::forward<V>(vis));
+            }
         }
-    }
+
+        template<typename V>
+        constexpr auto visit(V &&vis) const -> void {
+            for (const auto &x : values) {
+                x.visit(std::forward<V>(vis));
+            }
+        }
+    };
 };
 
 } // namespace astutil
