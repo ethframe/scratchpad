@@ -114,7 +114,7 @@ struct evaluator {
         switch (e.op_) {
         case nop::sum:
             auto sum = 0;
-            for (auto i = 0; i < std::size(e.args); ++i) {
+            for (std::size_t i = 0; i < std::size(e.args); ++i) {
                 sum += stack.top();
                 stack.pop();
             }
