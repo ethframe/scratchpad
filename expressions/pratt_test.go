@@ -87,8 +87,8 @@ func TestParse(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Parse(tt.args.src); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Parse() = %v, want %v", got, tt.want)
+			if got, err := Parse(tt.args.src); err != nil || !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Parse() = %v (%v), want %v", got, err, tt.want)
 			}
 		})
 	}

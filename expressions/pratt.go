@@ -1,6 +1,7 @@
 package expressions
 
 import (
+	"errors"
 	"regexp"
 )
 
@@ -33,26 +34,37 @@ type Term struct {
 var tokens = regexp.MustCompile(`(?P<ident>[a-zA-Z_][a-zA-Z_0-9]*)|(?P<num>[0-9]+)|(?P<op>[+\-*/()!^])|[ \n\r\t]+`)
 var eof = Token{Kind: "eof"}
 
-type NudParser func(*Lexer) Node
-type LedParser func(*Lexer, Node) Node
+type NudParser func(*Lexer) (Node, error)
+type LedParser func(*Lexer, Node) (Node, error)
 
 func prefix(op string, bp int) NudParser {
-	return func(l *Lexer) Node {
-		return &Unary{Op: op, Arg: parseExpr(l, bp)}
+	return func(l *Lexer) (Node, error) {
+		expr, err := parseExpr(l, bp)
+		if err != nil {
+			return nil, err
+		}
+		return &Unary{Op: op, Arg: expr}, nil
 	}
 }
 
 func closedDrop(bp int, end string) NudParser {
-	return func(l *Lexer) Node {
-		expr := parseUntil(l, bp, Token{"op", end})
+	return func(l *Lexer) (Node, error) {
+		expr, err := parseUntil(l, bp, Token{"op", end})
+		if err != nil {
+			return nil, err
+		}
 		l.Advance()
-		return expr
+		return expr, nil
 	}
 }
 
 func infix(op string, rbp int) LedParser {
-	return func(l *Lexer, expr Node) Node {
-		return &Binary{Op: op, Lhs: expr, Rhs: parseExpr(l, rbp)}
+	return func(l *Lexer, expr Node) (Node, error) {
+		rhs, err := parseExpr(l, rbp)
+		if err != nil {
+			return nil, err
+		}
+		return &Binary{Op: op, Lhs: expr, Rhs: rhs}, nil
 	}
 }
 
@@ -65,22 +77,22 @@ func infixRight(op string, bp int) LedParser {
 }
 
 func postfix(lbp int, op string) LedParser {
-	return func(l *Lexer, expr Node) Node {
-		return &Unary{Op: op, Arg: expr}
+	return func(l *Lexer, expr Node) (Node, error) {
+		return &Unary{Op: op, Arg: expr}, nil
 	}
 }
 
-var nud map[string]func(*Lexer) Node
-var led map[string]func(*Lexer, Node) Node
+var nud map[string]NudParser
+var led map[string]LedParser
 var lbp map[string]int
 
 func init() {
-	nud = map[string]func(*Lexer) Node{
+	nud = map[string]NudParser{
 		"+": prefix("pos", 5),
 		"-": prefix("neg", 5),
 		"(": closedDrop(0, ")"),
 	}
-	led = map[string]func(*Lexer, Node) Node{
+	led = map[string]LedParser{
 		"+": infixLeft("add", 0),
 		"-": infixLeft("sub", 0),
 		"*": infixLeft("mul", 2),
@@ -96,27 +108,31 @@ func init() {
 	}
 }
 
-func parsePrim(lexer *Lexer, tok Token) Node {
+func parsePrim(lexer *Lexer, tok Token) (Node, error) {
 	switch tok.Kind {
 	case "ident", "num":
 		lexer.Advance()
-		return &Term{Kind: tok.Kind, Value: tok.Value}
+		return &Term{Kind: tok.Kind, Value: tok.Value}, nil
 	}
-	panic("Unexpected token")
+	return nil, errors.New("Unexpected token")
 }
 
-func parseExpr(lexer *Lexer, bp int) Node {
+func parseExpr(lexer *Lexer, bp int) (Node, error) {
 	var expr Node
+	var err error
 	tok := lexer.Peek()
 	if tok.Kind == "op" {
 		if parseNud := nud[tok.Value]; parseNud != nil {
 			lexer.Advance()
-			expr = parseNud(lexer)
+			expr, err = parseNud(lexer)
 		} else {
-			expr = parsePrim(lexer, tok)
+			expr, err = parsePrim(lexer, tok)
 		}
 	} else {
-		expr = parsePrim(lexer, tok)
+		expr, err = parsePrim(lexer, tok)
+	}
+	if err != nil {
+		return nil, err
 	}
 	tok = lexer.Peek()
 	for tok.Kind == "op" {
@@ -125,21 +141,27 @@ func parseExpr(lexer *Lexer, bp int) Node {
 			break
 		}
 		lexer.Advance()
-		expr = parseLed(lexer, expr)
+		expr, err = parseLed(lexer, expr)
+		if err != nil {
+			return nil, err
+		}
 		tok = lexer.Peek()
 	}
-	return expr
+	return expr, nil
 }
 
-func Parse(src string) Node {
+func Parse(src string) (Node, error) {
 	lexer := NewLexer([]byte(src), tokens, eof)
 	return parseUntil(lexer, 0, eof)
 }
 
-func parseUntil(l *Lexer, bp int, tok Token) Node {
-	expr := parseExpr(l, bp)
-	if l.Peek() != tok {
-		panic("Unexpected token")
+func parseUntil(lexer *Lexer, bp int, tok Token) (Node, error) {
+	expr, err := parseExpr(lexer, bp)
+	if err != nil {
+		return nil, err
 	}
-	return expr
+	if lexer.Peek() != tok {
+		return nil, errors.New("Unexpected token")
+	}
+	return expr, nil
 }
