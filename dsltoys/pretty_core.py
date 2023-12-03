@@ -111,24 +111,20 @@ class Formatter:
         self._stream = stream
         self._width = width
         self._current = 0
-        self._newlines = 0
         self._indent = 0
         self._stack: list[tuple[int, bool, Doc]] = []
 
     def text(self, text: str) -> None:
-        if self._newlines != 0:
-            self._stream.write("\n" * self._newlines)
-            self._newlines = 0
-        if self._indent != 0:
+        if self._indent > 0:
             self._stream.write(" " * self._indent)
             self._indent = 0
         self._stream.write(text)
         self._current += len(text)
 
     def line(self, indent: int) -> None:
-        self._newlines += 1
-        self._indent = indent
+        self._stream.write("\n")
         self._current = indent
+        self._indent = indent
 
     def fits(self, doc: Doc) -> bool:
         return Fitter(self._width - self._current).fits(doc, self._stack)
@@ -141,6 +137,3 @@ class Formatter:
         while len(self._stack) != 0:
             indent, flat, doc = self._stack.pop()
             doc.format(indent, flat, self)
-        if self._newlines != 0:
-            self._stream.write("\n")
-            self._newlines -= 1
