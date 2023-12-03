@@ -1,7 +1,7 @@
 from io import StringIO
 
 from pretty_core import (
-    Doc, DocBreak, DocCons, DocGroup, DocNest, DocText, Formatter
+    Doc, DocBreak, DocCons, DocGroup, DocNest, DocNil, DocText, Formatter
 )
 
 
@@ -45,15 +45,4 @@ class Pretty:
         return stream.getvalue()
 
 
-class P:
-    @staticmethod
-    def text(text: str) -> Pretty:
-        return Pretty(DocText(text))
-
-    @staticmethod
-    def group(doc: Pretty) -> Pretty:
-        return doc.wrap_in_group()
-
-    @staticmethod
-    def nest(indent: int, nested: Pretty) -> Pretty:
-        return nested.wrap_in_nest(indent)
+P = Pretty(DocNil())

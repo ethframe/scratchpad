@@ -9,6 +9,14 @@ class Doc(ABC):
     def format(self, indent: int, flat: bool, fmt: "Formatter") -> None: ...
 
 
+class DocNil(Doc):
+    def fits(self, flat: bool, fit: "Fitter") -> None:
+        pass
+
+    def format(self, indent: int, flat: bool, fmt: "Formatter") -> None:
+        pass
+
+
 class DocCons(Doc):
     def __init__(self, fst: Doc, snd: Doc):
         self._fst = fst
