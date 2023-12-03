@@ -19,10 +19,13 @@ class Pretty:
         return self._cons(DocText(text))
 
     def sp(self) -> "Pretty":
-        return self._cons(DocBreak(" "))
+        return self._cons(DocBreak(" ", ""))
 
-    def br(self, text: str) -> "Pretty":
-        return self._cons(DocBreak(text))
+    def br(self, text: str, break_: str) -> "Pretty":
+        return self._cons(DocBreak(text, break_))
+
+    def nl(self) -> "Pretty":
+        return self._cons(DocBreak(None, ""))
 
     def group(self, doc: "Pretty") -> "Pretty":
         return self._cons(DocGroup(doc._doc))

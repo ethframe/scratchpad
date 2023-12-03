@@ -47,19 +47,22 @@ class DocNest(Doc):
 
 
 class DocBreak(Doc):
-    def __init__(self, value: str):
-        self._value = value
+    def __init__(self, flat: str | None, break_: str):
+        self._flat = flat
+        self._break = break_
 
     def fits(self, flat: bool, fit: "Fitter") -> None:
-        if flat:
-            fit.text(self._value)
+        if flat and self._flat is not None:
+            fit.text(self._flat)
         else:
+            fit.text(self._break)
             fit.line()
 
     def format(self, indent: int, flat: bool, fmt: "Formatter") -> None:
-        if flat:
-            fmt.text(self._value)
+        if flat and self._flat is not None:
+            fmt.text(self._flat)
         else:
+            fmt.text(self._break)
             fmt.line(indent)
 
 
