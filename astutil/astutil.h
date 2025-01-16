@@ -65,9 +65,7 @@ struct invoke_visit_children {
 constexpr auto visit_children = default_invocable<invoke_visit_children>{};
 
 template<typename V, typename T>
-constexpr auto visit(V &&vis, T &&value) -> decltype(exit(
-    std::declval<V>(),
-    std::declval<std::variant_alternative_t<0, std::decay_t<T>>>())) {
+constexpr auto visit(V &&vis, T &&value) {
     return std::visit(
         [&](auto &&v) {
             enter(std::forward<V>(vis), *std::forward<decltype(v)>(v));
@@ -90,9 +88,13 @@ template<typename... Ts>
 struct node {
     std::variant<std::unique_ptr<Ts>...> value;
 
-    template<typename T, typename = std::enable_if_t<
-                             !std::is_same_v<node<Ts...>, std::decay_t<T>>>>
-    constexpr node(T &&v) : value{std::make_unique<T>(std::forward<T>(v))} {}
+    template<
+        typename T,
+        std::enable_if_t<
+            std::disjunction_v<std::is_same<std::decay_t<T>, Ts>...>, int> = 0>
+    constexpr node(T &&v) noexcept(
+        std::is_nothrow_constructible_v<decltype(value), std::unique_ptr<T>>)
+        : value{std::make_unique<T>(std::forward<T>(v))} {}
 
     template<typename V>
     constexpr auto visit(V &&vis)
