@@ -92,9 +92,7 @@ struct node {
         typename T,
         std::enable_if_t<
             std::disjunction_v<std::is_same<std::decay_t<T>, Ts>...>, int> = 0>
-    constexpr node(T &&v) noexcept(
-        std::is_nothrow_constructible_v<decltype(value), std::unique_ptr<T>>)
-        : value{std::make_unique<T>(std::forward<T>(v))} {}
+    constexpr node(T &&v) : value{std::make_unique<T>(std::forward<T>(v))} {}
 
     template<typename V>
     constexpr auto visit(V &&vis)

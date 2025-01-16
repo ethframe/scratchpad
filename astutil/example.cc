@@ -12,14 +12,14 @@ struct binary_expression {
     expression lhs;
     expression rhs;
 
-    auto children() const { return std::tie(lhs, rhs); }
+    auto children() const noexcept { return std::tie(lhs, rhs); }
 };
 
 struct nary_expression {
     enum class op { sum = 0 } op_;
     expression::nodes args;
 
-    auto children() const { return std::tie(args); }
+    auto children() const noexcept { return std::tie(args); }
 };
 
 auto make_expression() {
